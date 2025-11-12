@@ -15,7 +15,34 @@ Le script va créer :
 - Les politiques RLS (Row Level Security)
 - Une vue `download_logs` pour faciliter l'accès aux logs
 
-## 2. Créer un compte utilisateur (si tu n'en as pas)
+## 2. Vérifier que tout fonctionne
+
+### Étape 1 : Vérifier que la table admin_users existe
+
+Exécute cette requête SQL dans Supabase SQL Editor :
+
+```sql
+SELECT * FROM admin_users;
+```
+
+Si tu obtiens une erreur "relation admin_users does not exist", exécute d'abord le script SQL `supabase-admin.sql` (voir étape 1).
+
+### Étape 2 : Vérifier ton statut admin
+
+Utilise le script de vérification :
+
+```bash
+cd app
+npm run check:admin ton@email.com
+```
+
+Le script va :
+- ✅ Vérifier si la table `admin_users` existe
+- ✅ Vérifier si ton compte utilisateur existe
+- ✅ Vérifier si tu es dans la table `admin_users`
+- ✅ Afficher des instructions si tu n'es pas admin
+
+## 3. Créer un compte utilisateur (si tu n'en as pas)
 
 Si tu n'as pas encore de compte :
 1. Va sur ton site : `https://ton-domaine.com`
@@ -25,7 +52,7 @@ Si tu n'as pas encore de compte :
 
 **Important** : Tu utiliseras ce même email et mot de passe pour accéder à l'espace admin. Il n'y a **pas de mot de passe séparé** pour l'admin.
 
-## 3. Créer un utilisateur admin
+## 4. Créer un utilisateur admin
 
 Après avoir créé ton compte utilisateur, tu dois l'ajouter à la table `admin_users` :
 
@@ -55,7 +82,7 @@ WHERE email = 'ton@email.com';
 
 Ensuite, utilise l'`id` retourné dans l'INSERT ci-dessus.
 
-## 4. Configurer les variables d'environnement
+## 5. Configurer les variables d'environnement
 
 Assure-toi d'avoir la variable `SUPABASE_SERVICE_ROLE_KEY` dans ton fichier `.env.local` :
 
@@ -68,7 +95,7 @@ NEXT_PUBLIC_SITE_URL=https://ton-domaine.com
 
 ⚠️ **Important** : La `SUPABASE_SERVICE_ROLE_KEY` est sensible et ne doit jamais être exposée côté client.
 
-## 5. Accéder à l'espace admin
+## 6. Accéder à l'espace admin
 
 Une fois l'utilisateur admin créé, tu peux accéder à l'espace admin :
 
@@ -81,7 +108,7 @@ Une fois l'utilisateur admin créé, tu peux accéder à l'espace admin :
 - L'espace admin est protégé et redirige automatiquement vers le dashboard si tu n'es pas admin
 - Si tu n'es pas dans la table `admin_users`, tu seras redirigé vers `/dashboard`
 
-## 6. Fonctionnalités disponibles
+## 7. Fonctionnalités disponibles
 
 ### Liste des utilisateurs / plans
 - ✅ Vue d'ensemble de tous les utilisateurs
@@ -106,7 +133,7 @@ Une fois l'utilisateur admin créé, tu peux accéder à l'espace admin :
 - ✅ Affichage des détails (date, utilisateur, lead magnet, email du lead, nom du lead)
 - ✅ Actualisation en temps réel
 
-## 7. Sécurité
+## 8. Sécurité
 
 - ✅ Vérification du rôle admin sur toutes les routes API
 - ✅ Utilisation du service role key uniquement côté serveur
@@ -114,7 +141,7 @@ Une fois l'utilisateur admin créé, tu peux accéder à l'espace admin :
 - ✅ Empêche les admins de supprimer leur propre compte
 - ✅ Middleware qui vérifie l'authentification avant d'accéder à `/admin`
 
-## 8. Prochaines étapes
+## 9. Prochaines étapes
 
 1. Exécuter le script SQL dans Supabase
 2. Créer ton utilisateur admin
@@ -123,7 +150,7 @@ Une fois l'utilisateur admin créé, tu peux accéder à l'espace admin :
 5. Tester la suppression d'un fichier
 6. Tester la suppression d'un compte (utilise un compte de test)
 
-## 9. Notes importantes
+## 10. Notes importantes
 
 - **Pas de mot de passe séparé** : Tu utilises ton compte utilisateur normal pour accéder à l'admin
 - Les admins peuvent voir tous les utilisateurs et leurs données
@@ -132,7 +159,7 @@ Une fois l'utilisateur admin créé, tu peux accéder à l'espace admin :
 - Les logs de téléchargement sont limités à 50 par défaut (configurable dans l'API)
 - Le stockage est calculé en temps réel depuis Supabase Storage
 
-## 10. Résumé : Comment devenir admin
+## 11. Résumé : Comment devenir admin
 
 ### Méthode 1 : Script automatique (recommandé)
 
@@ -161,7 +188,7 @@ Une fois l'utilisateur admin créé, tu peux accéder à l'espace admin :
 4. **Connecte-toi** avec ton compte utilisateur normal
 5. **Va sur `/admin`** - tu auras maintenant accès à l'espace admin
 
-## 11. Important : Pas de mot de passe séparé
+## 12. Important : Pas de mot de passe séparé
 
 **Tu utilises ton compte utilisateur normal** pour accéder à l'admin :
 - ✅ Même email
