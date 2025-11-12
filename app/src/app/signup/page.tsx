@@ -33,11 +33,11 @@ export default function SignupPage() {
       if (data.user) {
         // If email confirmation is disabled, user is automatically logged in
         if (data.session) {
-          // Wait for session to be fully established and cookies to be set
+          // createBrowserClient from @supabase/ssr handles cookies automatically
           // Use window.location.href to force a full page reload so cookies are sent
           setTimeout(() => {
             window.location.href = '/dashboard';
-          }, 1000);
+          }, 500);
         } else {
           // Email confirmation required
           setSuccess(true);

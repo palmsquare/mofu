@@ -1,3 +1,4 @@
+import { createBrowserClient } from '@supabase/ssr';
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -10,8 +11,6 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-let cachedBrowserClient: SupabaseClient | null = null;
-
 export const supabaseBrowserClient = () => {
   if (!supabaseUrl || !supabaseAnonKey) {
     const error = `Supabase n'est pas configuré côté client. URL: ${supabaseUrl ? '✅' : '❌'}, Key: ${supabaseAnonKey ? '✅' : '❌'}`;
@@ -19,21 +18,8 @@ export const supabaseBrowserClient = () => {
     throw new Error(error);
   }
 
-  if (!cachedBrowserClient) {
-    try {
-      cachedBrowserClient = createClient(supabaseUrl, supabaseAnonKey, {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-        },
-      });
-    } catch (error) {
-      console.error("Erreur lors de la création du client Supabase:", error);
-      throw new Error("Impossible de créer le client Supabase. Vérifie tes variables d'environnement.");
-    }
-  }
-
-  return cachedBrowserClient;
+  // Use @supabase/ssr for proper cookie handling that works with middleware
+  return createBrowserClient(supabaseUrl, supabaseAnonKey);
 };
 
 export const supabaseServerClient = () => {

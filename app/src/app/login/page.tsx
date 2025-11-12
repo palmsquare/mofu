@@ -27,12 +27,12 @@ export default function LoginPage() {
       if (error) throw error;
 
       if (data.user && data.session) {
-        // Wait for session to be fully established and cookies to be set
+        // createBrowserClient from @supabase/ssr handles cookies automatically
         // Use window.location.href to force a full page reload so cookies are sent
         // The dashboard will automatically claim anonymous lead magnets
         setTimeout(() => {
           window.location.href = '/dashboard';
-        }, 1000);
+        }, 500);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue');
