@@ -99,7 +99,7 @@ export async function POST(request: NextRequest) {
     const finalUtmMedium = utmMedium || refererUtmMedium || null;
     const finalUtmCampaign = utmCampaign || refererUtmCampaign || null;
 
-    // Get lead magnet to find owner
+    // Get lead magnet to find owner (use server client for public access)
     const supabase = supabaseServerClient();
     const { data: leadMagnet } = await supabase
       .from("lead_magnets")

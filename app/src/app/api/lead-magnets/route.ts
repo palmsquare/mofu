@@ -1,64 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
-
+import { createApiSupabaseClient } from "../../../lib/supabase-api-client";
 import { convertToProxyUrl } from "../../../lib/file-url";
-
-// Create Supabase client for API routes using request cookies
-function createApiSupabaseClient(request: NextRequest) {
-  let response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
-  });
-  
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value;
-        },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value,
-            ...options,
-          });
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-          response = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          });
-          response.cookies.set({
-            name,
-            value: '',
-            ...options,
-          });
-        },
-      },
-    }
-  );
-  
-  return { supabase, response };
-}
+import { canCreateLeadMagnet, calculateQuotaUsage, FREE_PLAN_QUOTAS } from "../../../lib/quotas";
 
 const SHARE_URL_BASE = process.env.NEXT_PUBLIC_SITE_URL 
   ? `${process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}/c/`
@@ -159,20 +102,70 @@ export async function POST(request: NextRequest) {
   const { supabase } = createApiSupabaseClient(request);
   const slug = `lm_${Math.random().toString(36).slice(2, 10)}`;
 
-  // Check if user is authenticated using cookies from request
-  // First refresh the session
-  await supabase.auth.getUser();
-  
-  // Then get the user
+  // Check if user is authenticated
   const { data: { user }, error: authError } = await supabase.auth.getUser();
   
-  if (authError) {
-    console.error("[lead-magnets][POST] auth error:", authError);
-    console.error("[lead-magnets][POST] auth error details:", JSON.stringify(authError, null, 2));
+  if (authError || !user) {
+    return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
   }
-  
-  console.log("[lead-magnets][POST] User ID:", user?.id || "anonymous");
-  console.log("[lead-magnets][POST] Cookies:", request.cookies.getAll().map(c => ({ name: c.name, hasValue: !!c.value })));
+
+  // Check quotas if user is authenticated
+  // Get or create user quota
+  const { data: quota, error: quotaError } = await supabase
+    .from('user_quotas')
+    .select('*')
+    .eq('user_id', user.id)
+    .single();
+
+  // If no quota exists, create one
+  let userQuota;
+  if (quotaError || !quota) {
+    const { data: newQuota, error: createError } = await supabase
+      .from('user_quotas')
+      .insert({
+        user_id: user.id,
+        plan_type: 'free',
+        storage_limit_mb: FREE_PLAN_QUOTAS.storageLimitMB,
+        downloads_limit: FREE_PLAN_QUOTAS.downloadsLimit,
+        lead_magnets_limit: FREE_PLAN_QUOTAS.leadMagnetsLimit,
+        storage_used_mb: 0,
+        downloads_used: 0,
+        lead_magnets_used: 0,
+      })
+      .select()
+      .single();
+
+    if (createError) {
+      console.error("[lead-magnets][POST] create quota error:", createError);
+      return NextResponse.json({ error: "Impossible de créer le quota." }, { status: 500 });
+    }
+
+    userQuota = newQuota;
+  } else {
+    userQuota = quota;
+  }
+
+  // Calculate actual usage
+  const { count: leadMagnetsCount } = await supabase
+    .from('lead_magnets')
+    .select('*', { count: 'exact', head: true })
+    .eq('owner_id', user.id);
+
+  // Check if user can create a new lead magnet
+  const actualLeadMagnets = leadMagnetsCount || 0;
+  const usage = calculateQuotaUsage(
+    userQuota,
+    0, // Storage will be calculated separately
+    0, // Downloads will be calculated separately
+    actualLeadMagnets
+  );
+
+  if (!canCreateLeadMagnet(usage)) {
+    return NextResponse.json(
+      { error: `Limite atteinte. Tu as utilisé ${usage.leadMagnetsUsed}/${usage.leadMagnetsLimit} lead magnets. Passe au plan Pro pour créer plus de lead magnets.` },
+      { status: 403 }
+    );
+  }
 
   const insertPayload = {
     slug,

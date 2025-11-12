@@ -210,7 +210,15 @@ export function LeadMagnetWizard({ initialSource, initialTitle, onResetSource }:
 
       if (!response.ok) {
         const errorPayload = (await response.json().catch(() => null)) as { error?: string } | null;
-        setStatusMessage(errorPayload?.error ?? "Impossible de sauvegarder le lead magnet.");
+        const errorMessage = errorPayload?.error ?? "Impossible de sauvegarder le lead magnet.";
+        setStatusMessage(errorMessage);
+        
+        // If quota error, redirect to dashboard after 3 seconds
+        if (response.status === 403 && errorMessage.includes("Limite atteinte")) {
+          setTimeout(() => {
+            router.push("/dashboard");
+          }, 3000);
+        }
         return;
       }
 
