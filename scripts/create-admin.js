@@ -8,9 +8,13 @@
  *   node scripts/create-admin.js admin@example.com
  */
 
-const { createClient } = require('@supabase/supabase-js');
 const fs = require('fs');
 const path = require('path');
+
+// Load @supabase/supabase-js from app/node_modules
+const appNodeModules = path.join(__dirname, '..', 'app', 'node_modules');
+const supabasePath = path.join(appNodeModules, '@supabase', 'supabase-js');
+const { createClient } = require(supabasePath);
 
 // Load environment variables from app/.env.local
 const envPath = path.join(__dirname, '..', 'app', '.env.local');
