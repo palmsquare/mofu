@@ -1,4 +1,5 @@
 import { HomeHero } from "../components/home-hero";
+import Link from "next/link";
 
 export default function Home() {
   return (
@@ -28,9 +29,12 @@ export default function Home() {
             <button className="rounded-full px-3 py-1 text-zinc-600 transition hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-white">
               Mode clair/sombre
             </button>
-            <button className="rounded-full bg-zinc-900 px-4 py-1.5 font-semibold text-white transition hover:bg-zinc-700 dark:bg-white dark:text-black">
+            <Link
+              href="/login"
+              className="rounded-full bg-zinc-900 px-4 py-1.5 font-semibold text-white transition hover:bg-zinc-700 dark:bg-white dark:text-black"
+            >
               Se connecter
-            </button>
+            </Link>
           </div>
         </header>
 
@@ -190,15 +194,28 @@ function PricingSection() {
                 </li>
               ))}
             </ul>
-            <button
-              className={`mt-auto rounded-full px-4 py-2 text-sm font-semibold transition ${
-                plan.highlighted
-                  ? "bg-indigo-600 text-white hover:bg-indigo-500"
-                  : "bg-zinc-900 text-white hover:bg-zinc-700 dark:bg-white dark:text-black"
-              }`}
-            >
-              {plan.cta}
-            </button>
+            {plan.cta === "Créer un compte" ? (
+              <Link
+                href="/signup"
+                className={`mt-auto rounded-full px-4 py-2 text-sm font-semibold transition text-center ${
+                  plan.highlighted
+                    ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                    : "bg-zinc-900 text-white hover:bg-zinc-700 dark:bg-white dark:text-black"
+                }`}
+              >
+                {plan.cta}
+              </Link>
+            ) : (
+              <button
+                className={`mt-auto rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  plan.highlighted
+                    ? "bg-indigo-600 text-white hover:bg-indigo-500"
+                    : "bg-zinc-900 text-white hover:bg-zinc-700 dark:bg-white dark:text-black"
+                }`}
+              >
+                {plan.cta}
+              </button>
+            )}
           </div>
         ))}
       </div>
