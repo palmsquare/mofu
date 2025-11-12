@@ -28,11 +28,11 @@ export default function LoginPage() {
 
       if (data.user && data.session) {
         // Wait a bit for session to be fully established, then redirect
+        // Use window.location.href to force a full page reload so cookies are sent
         // The dashboard will automatically claim anonymous lead magnets
         setTimeout(() => {
-          router.push('/dashboard');
-          router.refresh();
-        }, 300);
+          window.location.href = '/dashboard';
+        }, 500);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue');

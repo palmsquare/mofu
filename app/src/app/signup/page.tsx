@@ -34,11 +34,10 @@ export default function SignupPage() {
         // If email confirmation is disabled, user is automatically logged in
         if (data.session) {
           // Wait a bit for session to be fully established, then redirect
-          // The dashboard will automatically claim anonymous lead magnets
+          // Use window.location.href to force a full page reload so cookies are sent
           setTimeout(() => {
-            router.push('/dashboard');
-            router.refresh();
-          }, 300);
+            window.location.href = '/dashboard';
+          }, 500);
         } else {
           // Email confirmation required
           setSuccess(true);
