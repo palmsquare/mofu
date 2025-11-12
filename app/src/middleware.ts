@@ -73,6 +73,13 @@ export async function middleware(request: NextRequest) {
     return response;
   }
 
+  // Check admin routes - middleware will check admin status in the page
+  if (pathname.startsWith('/admin')) {
+    // Refresh session but don't redirect - admin check happens in the page
+    await supabase.auth.getUser();
+    return response;
+  }
+
   // Refresh session if expired
   await supabase.auth.getUser();
 
