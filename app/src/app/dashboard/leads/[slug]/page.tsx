@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabase-server';
 import Link from 'next/link';
+import { ExportButton } from './export-button';
 
 export default async function LeadsPage({
   params,
@@ -30,12 +31,43 @@ export default async function LeadsPage({
     redirect('/dashboard');
   }
 
-  // Fetch leads for this magnet
-  const { data: leads } = await supabase
+  // Fetch leads for this magnet (only leads owned by the user)
+  const { data: leads, error: leadsError } = await supabase
     .from('leads')
     .select('*')
     .eq('lead_magnet_slug', slug)
+    .eq('owner_id', user.id)
     .order('created_at', { ascending: false });
+
+  if (leadsError) {
+    console.error('Error fetching leads:', leadsError);
+  }
+
+  // Parse form_data if it's a string (JSON)
+  const parsedLeads = (leads || []).map((lead) => {
+    let formData = lead.form_data;
+    if (typeof formData === 'string') {
+      try {
+        formData = JSON.parse(formData);
+      } catch (e) {
+        console.error('Error parsing form_data:', e);
+        formData = {};
+      }
+    }
+    return {
+      ...lead,
+      form_data: formData as Record<string, unknown> | null,
+    };
+  });
+
+  // Get all unique field keys from all leads
+  const allFieldKeys = new Set<string>();
+  parsedLeads.forEach((lead) => {
+    if (lead.form_data && typeof lead.form_data === 'object') {
+      Object.keys(lead.form_data).forEach((key) => allFieldKeys.add(key));
+    }
+  });
+  const fieldKeys = Array.from(allFieldKeys);
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -54,7 +86,7 @@ export default async function LeadsPage({
                 {leadMagnet.title}
               </h1>
               <p className="text-sm text-gray-600 mt-1">
-                {leads?.length || 0} leads collectés
+                {parsedLeads?.length || 0} leads collectés
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -65,33 +97,7 @@ export default async function LeadsPage({
               >
                 Voir la page
               </Link>
-              <button
-                onClick={() => {
-                  // Export to CSV
-                  if (!leads || leads.length === 0) return;
-                  
-                  const headers = Object.keys(leads[0].form_data || {});
-                  const csv = [
-                    ['Date', ...headers].join(','),
-                    ...leads.map((lead) =>
-                      [
-                        new Date(lead.created_at).toLocaleString('fr-FR'),
-                        ...headers.map((h) => lead.form_data[h] || ''),
-                      ].join(',')
-                    ),
-                  ].join('\n');
-
-                  const blob = new Blob([csv], { type: 'text/csv' });
-                  const url = URL.createObjectURL(blob);
-                  const a = document.createElement('a');
-                  a.href = url;
-                  a.download = `leads-${slug}-${Date.now()}.csv`;
-                  a.click();
-                }}
-                className="text-sm bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                Exporter CSV
-              </button>
+              <ExportButton leads={parsedLeads} slug={slug} />
             </div>
           </div>
         </div>
@@ -100,7 +106,7 @@ export default async function LeadsPage({
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          {!leads || leads.length === 0 ? (
+          {!parsedLeads || parsedLeads.length === 0 ? (
             <div className="px-6 py-12 text-center">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg
@@ -132,7 +138,7 @@ export default async function LeadsPage({
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Date
                     </th>
-                    {Object.keys(leads[0].form_data || {}).map((key) => (
+                    {fieldKeys.map((key) => (
                       <th
                         key={key}
                         className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -143,17 +149,17 @@ export default async function LeadsPage({
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {leads.map((lead) => (
+                  {parsedLeads.map((lead) => (
                     <tr key={lead.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         {new Date(lead.created_at).toLocaleString('fr-FR')}
                       </td>
-                      {Object.keys(lead.form_data || {}).map((key) => (
+                      {fieldKeys.map((key) => (
                         <td
                           key={key}
                           className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
                         >
-                          {lead.form_data[key]}
+                          {String(lead.form_data?.[key] || '')}
                         </td>
                       ))}
                     </tr>
