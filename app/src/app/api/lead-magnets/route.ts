@@ -154,6 +154,7 @@ export async function POST(request: Request) {
         ? convertToProxyUrl(data.resource_url)
         : data.resource_url,
       shareUrl: data.slug ? `${SHARE_URL_BASE}${data.slug}` : null,
+      slug: data.slug,
     },
   });
 }

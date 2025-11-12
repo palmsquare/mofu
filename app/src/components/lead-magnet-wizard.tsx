@@ -3,6 +3,7 @@
 import { ChangeEvent, DragEvent, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import { useRouter } from "next/navigation";
+import { BuilderHeader } from "./builder-header";
 
 export type UploadSource =
   | { type: "file"; name: string; size: number; url?: string }

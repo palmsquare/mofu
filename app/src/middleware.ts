@@ -64,6 +64,8 @@ export async function middleware(request: NextRequest) {
     pathname === '/' ||
     pathname.startsWith('/c/') ||
     pathname.startsWith('/builder') ||
+    pathname.startsWith('/try') ||
+    pathname.startsWith('/success') ||
     pathname.startsWith('/api/')
   ) {
     // Refresh session but don't redirect
