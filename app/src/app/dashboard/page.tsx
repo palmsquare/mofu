@@ -34,15 +34,26 @@ export default async function DashboardPage() {
   }
 
   // Fetch user's lead magnets with lead counts
+  // Use left join to include lead magnets without leads
   const { data: leadMagnets, error } = await supabase
     .from('lead_magnets')
-    .select('*, leads(count)')
+    .select(`
+      *,
+      leads(count)
+    `)
     .eq('owner_id', user.id)
     .order('created_at', { ascending: false });
 
   if (error) {
     console.error('Error fetching lead magnets:', error);
+    console.error('Error details:', JSON.stringify(error, null, 2));
   }
+
+  // Format lead magnets to ensure consistent structure
+  const allLeadMagnets = (leadMagnets || []).map(lm => ({
+    ...lm,
+    leads: lm.leads && lm.leads.length > 0 ? lm.leads : [{ count: 0 }],
+  }));
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -78,7 +89,7 @@ export default async function DashboardPage() {
               <div>
                 <p className="text-sm text-gray-600 mb-1">Lead Magnets</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {leadMagnets?.length || 0}
+                  {allLeadMagnets?.length || 0}
                 </p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -104,7 +115,7 @@ export default async function DashboardPage() {
               <div>
                 <p className="text-sm text-gray-600 mb-1">Total Leads</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {leadMagnets?.reduce(
+                  {allLeadMagnets?.reduce(
                     (acc, lm) => acc + (lm.leads?.[0]?.count || 0),
                     0
                   ) || 0}
@@ -133,13 +144,13 @@ export default async function DashboardPage() {
               <div>
                 <p className="text-sm text-gray-600 mb-1">Taux de conversion</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {leadMagnets && leadMagnets.length > 0
+                  {allLeadMagnets && allLeadMagnets.length > 0
                     ? Math.round(
-                        (leadMagnets.reduce(
+                        (allLeadMagnets.reduce(
                           (acc, lm) => acc + (lm.leads?.[0]?.count || 0),
                           0
                         ) /
-                          leadMagnets.length) *
+                          allLeadMagnets.length) *
                           100
                       )
                     : 0}
@@ -173,7 +184,7 @@ export default async function DashboardPage() {
             </h2>
           </div>
 
-          {!leadMagnets || leadMagnets.length === 0 ? (
+          {!allLeadMagnets || allLeadMagnets.length === 0 ? (
             <div className="px-6 py-12 text-center">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg
@@ -200,7 +211,7 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="divide-y divide-gray-200">
-              {leadMagnets.map((magnet) => (
+              {allLeadMagnets.map((magnet) => (
                 <div
                   key={magnet.slug}
                   className="px-6 py-4 hover:bg-gray-50 transition-colors"

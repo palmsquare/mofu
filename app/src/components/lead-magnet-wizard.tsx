@@ -110,7 +110,6 @@ export function LeadMagnetWizard({ initialSource, initialTitle, onResetSource }:
   const [footerNote, setFooterNote] = useState(DEFAULT_NOTE);
   const [fields, setFields] = useState<FormField[]>(DEFAULT_FIELDS);
   const [downloadLimit, setDownloadLimit] = useState<number>(FREE_DOWNLOAD_LIMIT);
-  const [generatedUrl, setGeneratedUrl] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -167,7 +166,6 @@ export function LeadMagnetWizard({ initialSource, initialTitle, onResetSource }:
     setFooterNote(DEFAULT_NOTE);
     setFields(DEFAULT_FIELDS);
     setDownloadLimit(FREE_DOWNLOAD_LIMIT);
-    setGeneratedUrl(null);
     setStatusMessage(null);
     setImageDataUrl(template.showImage ? imageDataUrl : null);
   };
@@ -213,7 +211,6 @@ export function LeadMagnetWizard({ initialSource, initialTitle, onResetSource }:
       if (!response.ok) {
         const errorPayload = (await response.json().catch(() => null)) as { error?: string } | null;
         setStatusMessage(errorPayload?.error ?? "Impossible de sauvegarder le lead magnet.");
-        setGeneratedUrl(null);
         return;
       }
 
@@ -226,12 +223,11 @@ export function LeadMagnetWizard({ initialSource, initialTitle, onResetSource }:
         router.push(`/success?url=${encodeURIComponent(shareUrl)}&slug=${encodeURIComponent(slug)}`);
       } else {
         setStatusMessage("Erreur: Impossible de récupérer le lien partageable.");
+        setIsSaving(false);
       }
     } catch (error) {
       console.error("[LeadMagnetWizard] POST /api/lead-magnets", error);
       setStatusMessage("Erreur réseau pendant la sauvegarde.");
-      setGeneratedUrl(null);
-    } finally {
       setIsSaving(false);
     }
   };
@@ -517,69 +513,6 @@ export function LeadMagnetWizard({ initialSource, initialTitle, onResetSource }:
             onFieldLabelChange={handleFieldLabelChange}
             onFieldPlaceholderChange={handleFieldPlaceholderChange}
           />
-
-          {generatedUrl && (
-            <section className="rounded-3xl border border-blue-200 bg-gradient-to-br from-blue-50 to-indigo-50 p-6 shadow-sm">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="mb-3 flex items-center gap-2">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600">
-                      <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900">Ton lien est prêt 🎉</h3>
-                  </div>
-                  <p className="mb-4 text-sm text-gray-700">
-                    Crée un compte pour suivre les téléchargements, exporter les leads et gérer plusieurs magnets.
-                  </p>
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <a
-                      href="/signup"
-                      className="inline-flex items-center justify-center rounded-lg bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-                    >
-                      Créer mon compte
-                    </a>
-                    <a
-                      href="/login"
-                      className="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-5 py-2.5 text-sm font-semibold text-gray-700 transition hover:bg-gray-50"
-                    >
-                      J'ai déjà un compte
-                    </a>
-                  </div>
-                </div>
-              </div>
-            </section>
-          )}
-
-          <div className="grid gap-6 lg:grid-cols-2">
-            {generatedUrl ? (
-              <section className="space-y-3 rounded-3xl border border-emerald-200 bg-emerald-50 p-6 text-sm text-emerald-900 shadow-sm dark:border-emerald-500/40 dark:bg-emerald-500/15 dark:text-emerald-100">
-                <p className="text-lg font-semibold">Lien prêt à partager</p>
-                <div className="flex items-center gap-2 rounded-full bg-white/80 px-4 py-2 text-sm text-emerald-700 dark:bg-white/10 dark:text-emerald-100">
-                  <span className="truncate">{generatedUrl}</span>
-                  <button
-                    type="button"
-                    onClick={() => navigator.clipboard.writeText(generatedUrl)}
-                    className="rounded-full bg-emerald-600 px-3 py-1 text-xs font-semibold text-white transition hover:bg-emerald-500"
-                  >
-                    Copier
-                  </button>
-                </div>
-                <p className="text-xs text-emerald-900/70 dark:text-emerald-100/80">
-                  Chaque téléchargement sera enregistré automatiquement dans ton dashboard.
-                </p>
-              </section>
-            ) : (
-              <section className="space-y-3 rounded-3xl border border-dashed border-zinc-300 bg-white/60 p-6 text-sm text-zinc-500 shadow-sm dark:border-white/20 dark:bg-white/5 dark:text-zinc-300">
-                <p className="text-lg font-semibold text-zinc-700 dark:text-zinc-100">Ton lien apparaîtra ici</p>
-                <p>
-                  Dès que tu génères la page, nous t’indiquons le lien partageable. Tu pourras le copier en un clic pour le
-                  diffuser à ton audience.
-                </p>
-              </section>
-            )}
-          </div>
         </div>
       </div>
     </section>

@@ -23,10 +23,10 @@ export async function POST(request: Request) {
 
   const supabase = supabaseServerClient();
 
-  // Query by ID or slug
+  // Query by ID or slug - include owner_id to assign leads to the lead magnet owner
   let query = supabase
     .from("lead_magnets")
-    .select("id, slug, download_limit, resource_url, resource_type");
+    .select("id, slug, download_limit, resource_url, resource_type, owner_id");
 
   if (body.leadMagnetId) {
     query = query.eq("id", body.leadMagnetId);
@@ -61,9 +61,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Quota de téléchargements atteint." }, { status: 429 });
   }
 
-  // Check if user is authenticated
-  const { data: { user } } = await supabase.auth.getUser();
-
+  // Assign lead to the lead magnet owner (not the prospect who submitted the form)
+  // This way leads appear in the dashboard of the lead magnet creator
   const { data: insertResult, error: insertError } = await supabase
     .from("leads")
     .insert({
@@ -71,7 +70,7 @@ export async function POST(request: Request) {
       lead_magnet_slug: leadMagnet.slug,
       form_data: body.data,
       consent_granted: Boolean(body.consentGranted),
-      owner_id: user?.id || null, // Assign owner if authenticated, null otherwise
+      owner_id: leadMagnet.owner_id || null, // Assign to lead magnet owner
     })
     .select("id, created_at")
     .single();

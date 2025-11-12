@@ -1,7 +1,64 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
-import { supabaseServerClient } from "../../../lib/supabase-client";
 import { convertToProxyUrl } from "../../../lib/file-url";
+
+// Create Supabase client for API routes using request cookies
+function createApiSupabaseClient(request: NextRequest) {
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
+  
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name: string) {
+          return request.cookies.get(name)?.value;
+        },
+        set(name: string, value: string, options: CookieOptions) {
+          request.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          });
+          response.cookies.set({
+            name,
+            value,
+            ...options,
+          });
+        },
+        remove(name: string, options: CookieOptions) {
+          request.cookies.set({
+            name,
+            value: '',
+            ...options,
+          });
+          response = NextResponse.next({
+            request: {
+              headers: request.headers,
+            },
+          });
+          response.cookies.set({
+            name,
+            value: '',
+            ...options,
+          });
+        },
+      },
+    }
+  );
+  
+  return { supabase, response };
+}
 
 const SHARE_URL_BASE = process.env.NEXT_PUBLIC_SITE_URL 
   ? `${process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}/c/`
@@ -29,8 +86,8 @@ type LeadMagnetPayload = {
   footerNote?: string;
 };
 
-export async function GET() {
-  const supabase = supabaseServerClient();
+export async function GET(request: NextRequest) {
+  const { supabase } = createApiSupabaseClient(request);
 
   const { data, error } = await supabase
     .from("lead_magnets")
@@ -75,7 +132,7 @@ export async function GET() {
   });
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   let body: LeadMagnetPayload;
 
   try {
@@ -99,11 +156,23 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "`resourceType` doit être `file` ou `link`." }, { status: 422 });
   }
 
-  const supabase = supabaseServerClient();
+  const { supabase } = createApiSupabaseClient(request);
   const slug = `lm_${Math.random().toString(36).slice(2, 10)}`;
 
-  // Check if user is authenticated
-  const { data: { user } } = await supabase.auth.getUser();
+  // Check if user is authenticated using cookies from request
+  // First refresh the session
+  await supabase.auth.getUser();
+  
+  // Then get the user
+  const { data: { user }, error: authError } = await supabase.auth.getUser();
+  
+  if (authError) {
+    console.error("[lead-magnets][POST] auth error:", authError);
+    console.error("[lead-magnets][POST] auth error details:", JSON.stringify(authError, null, 2));
+  }
+  
+  console.log("[lead-magnets][POST] User ID:", user?.id || "anonymous");
+  console.log("[lead-magnets][POST] Cookies:", request.cookies.getAll().map(c => ({ name: c.name, hasValue: !!c.value })));
 
   const insertPayload = {
     slug,
