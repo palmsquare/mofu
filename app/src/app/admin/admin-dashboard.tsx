@@ -176,6 +176,14 @@ export function AdminDashboard() {
               >
                 ← Retour au dashboard
               </Link>
+              <form action="/api/auth/signout" method="post">
+                <button
+                  type="submit"
+                  className="text-gray-600 hover:text-gray-900 text-sm font-medium"
+                >
+                  Déconnexion
+                </button>
+              </form>
             </div>
           </div>
         </div>
