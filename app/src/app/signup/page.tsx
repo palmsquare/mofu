@@ -31,9 +31,9 @@ export default function SignupPage() {
       if (error) throw error;
 
       if (data.user) {
-        // If email confirmation is disabled, claim and redirect
+        // If email confirmation is disabled, user is automatically logged in
         if (data.session) {
-          await fetch('/api/me/claim', { method: 'POST' });
+          // Redirect immediately - the dashboard will claim anonymous lead magnets
           router.push('/dashboard');
           router.refresh();
         } else {

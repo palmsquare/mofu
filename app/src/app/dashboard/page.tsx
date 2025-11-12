@@ -13,6 +13,25 @@ export default async function DashboardPage() {
     redirect('/login');
   }
 
+  // Claim anonymous lead magnets created in the last hour
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+  const { data: claimedMagnets } = await supabase
+    .from('lead_magnets')
+    .update({ owner_id: user.id })
+    .is('owner_id', null)
+    .gte('created_at', oneHourAgo)
+    .select();
+
+  // Also update leads for claimed magnets
+  if (claimedMagnets && claimedMagnets.length > 0) {
+    const magnetSlugs = claimedMagnets.map((m) => m.slug);
+    await supabase
+      .from('leads')
+      .update({ owner_id: user.id })
+      .in('lead_magnet_slug', magnetSlugs)
+      .is('owner_id', null);
+  }
+
   // Fetch user's lead magnets with lead counts
   const { data: leadMagnets, error } = await supabase
     .from('lead_magnets')

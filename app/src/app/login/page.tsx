@@ -26,9 +26,8 @@ export default function LoginPage() {
 
       if (error) throw error;
 
-      if (data.user) {
-        // Claim anonymous lead magnets
-        await fetch('/api/me/claim', { method: 'POST' });
+      if (data.user && data.session) {
+        // Redirect immediately - the dashboard will claim anonymous lead magnets
         router.push('/dashboard');
         router.refresh();
       }

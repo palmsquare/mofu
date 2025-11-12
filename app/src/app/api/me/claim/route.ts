@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { createServerSupabase } from '@/lib/supabase-server';
 
-export async function POST() {
+export async function POST(request: Request) {
   try {
     const supabase = await createServerSupabase();
     
@@ -10,9 +10,17 @@ export async function POST() {
       error: authError,
     } = await supabase.auth.getUser();
 
-    if (authError || !user) {
+    if (authError) {
+      console.error('[api/me/claim] Auth error:', authError);
+      return NextResponse.json({ error: 'Erreur d\'authentification', details: authError.message }, { status: 401 });
+    }
+
+    if (!user) {
+      console.error('[api/me/claim] No user found');
       return NextResponse.json({ error: 'Non authentifié' }, { status: 401 });
     }
+
+    console.log('[api/me/claim] Claiming for user:', user.id);
 
     // Claim all lead magnets with no owner (created anonymously in this session)
     // Note: In a real scenario, you'd track session IDs or use a more sophisticated method
