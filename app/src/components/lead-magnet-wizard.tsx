@@ -2,6 +2,7 @@
 
 import { ChangeEvent, DragEvent, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
+import { useRouter } from "next/navigation";
 
 export type UploadSource =
   | { type: "file"; name: string; size: number; url?: string }
@@ -94,6 +95,7 @@ type LeadMagnetWizardProps = {
 };
 
 export function LeadMagnetWizard({ initialSource, initialTitle, onResetSource }: LeadMagnetWizardProps) {
+  const router = useRouter();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>(TEMPLATE_LIBRARY[0].id);
   const template = useMemo(
     () => TEMPLATE_LIBRARY.find((item) => item.id === selectedTemplateId) ?? TEMPLATE_LIBRARY[0],
@@ -214,9 +216,16 @@ export function LeadMagnetWizard({ initialSource, initialTitle, onResetSource }:
         return;
       }
 
-      const payload = (await response.json()) as { data?: { shareUrl?: string } };
-      setGeneratedUrl(payload.data?.shareUrl ?? null);
-      setStatusMessage("Lead magnet sauvegardé avec succès ✨");
+      const payload = (await response.json()) as { data?: { shareUrl?: string; slug?: string } };
+      const shareUrl = payload.data?.shareUrl ?? null;
+      const slug = payload.data?.slug ?? null;
+      
+      if (shareUrl && slug) {
+        // Redirect to success page with the share URL
+        router.push(`/success?url=${encodeURIComponent(shareUrl)}&slug=${encodeURIComponent(slug)}`);
+      } else {
+        setStatusMessage("Erreur: Impossible de récupérer le lien partageable.");
+      }
     } catch (error) {
       console.error("[LeadMagnetWizard] POST /api/lead-magnets", error);
       setStatusMessage("Erreur réseau pendant la sauvegarde.");
@@ -259,6 +268,8 @@ export function LeadMagnetWizard({ initialSource, initialTitle, onResetSource }:
 
   return (
     <section className="space-y-10">
+      <BuilderHeader onPublish={handleGenerate} isPublishing={isSaving} />
+      
       <div className="rounded-3xl border border-zinc-100 bg-white p-8 shadow-sm dark:border-white/10 dark:bg-black/40">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-3">
@@ -474,23 +485,13 @@ export function LeadMagnetWizard({ initialSource, initialTitle, onResetSource }:
             <p className="text-xs text-zinc-500 dark:text-zinc-300">Astuce : mets 0 pour rendre le téléchargement illimité.</p>
           </section>
 
-          <div className="flex gap-3">
-            <button
-              type="button"
-              onClick={resetForm}
-              className="flex-1 rounded-full border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-600 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-white/15 dark:text-zinc-200 dark:hover:border-white/30"
-            >
-              Réinitialiser
-            </button>
-            <button
-              type="button"
-              onClick={handleGenerate}
-              disabled={isSaving}
-              className="flex-1 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-300"
-            >
-              {isSaving ? "Sauvegarde…" : "Générer le lien"}
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={resetForm}
+            className="w-full rounded-full border border-zinc-200 px-4 py-2 text-sm font-semibold text-zinc-600 transition hover:border-zinc-300 hover:text-zinc-900 dark:border-white/15 dark:text-zinc-200 dark:hover:border-white/30"
+          >
+            Réinitialiser
+          </button>
           {statusMessage && (
             <p className="text-xs font-semibold text-red-500 dark:text-red-300">{statusMessage}</p>
           )}

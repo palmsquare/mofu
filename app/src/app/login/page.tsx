@@ -28,12 +28,11 @@ export default function LoginPage() {
 
       if (data.user && data.session) {
         // createBrowserClient from @supabase/ssr handles cookies automatically
-        // Wait a bit longer to ensure cookies are written and synced
         // Use window.location.href to force a full page reload so cookies are sent
         // The dashboard will automatically claim anonymous lead magnets
         setTimeout(() => {
           window.location.href = '/dashboard';
-        }, 1000);
+        }, 500);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue');

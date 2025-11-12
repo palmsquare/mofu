@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabase-server';
 import Link from 'next/link';
+import { DashboardClient } from './dashboard-client';
 
 export default async function DashboardPage() {
   const supabase = await createServerSupabase();
@@ -54,12 +55,7 @@ export default async function DashboardPage() {
               <p className="text-sm text-gray-600 mt-1">{user.email}</p>
             </div>
             <div className="flex items-center gap-4">
-              <Link
-                href="/"
-                className="text-gray-600 hover:text-gray-900 text-sm font-medium"
-              >
-                Créer un lead magnet
-              </Link>
+              <DashboardClient />
               <form action="/api/auth/signout" method="post">
                 <button
                   type="submit"
@@ -200,12 +196,7 @@ export default async function DashboardPage() {
               <p className="text-gray-600 mb-6">
                 Crée ton premier lead magnet pour commencer à collecter des leads
               </p>
-              <Link
-                href="/"
-                className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-              >
-                Créer mon premier lead magnet
-              </Link>
+              <DashboardClient />
             </div>
           ) : (
             <div className="divide-y divide-gray-200">

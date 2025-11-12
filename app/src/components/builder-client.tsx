@@ -2,6 +2,7 @@
 
 import { ChangeEvent, DragEvent, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 
 import { LeadMagnetWizard, type UploadSource } from "./lead-magnet-wizard";
 
@@ -112,29 +113,6 @@ export function BuilderClient() {
 
   return (
     <div className="mx-auto flex max-w-6xl flex-col gap-10">
-      <header className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-600 text-lg font-semibold text-white">
-            LM
-          </div>
-          <div>
-            <p className="text-lg font-semibold text-zinc-900 dark:text-white">LeadMagnet Studio</p>
-            <p className="text-xs text-zinc-500 dark:text-zinc-300">
-              Personnalise ta page de capture et prépare ton lien partageable.
-            </p>
-          </div>
-        </div>
-        <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white/70 px-3 py-1 text-xs font-semibold text-zinc-600 shadow-sm backdrop-blur dark:border-white/10 dark:bg-white/10 dark:text-zinc-200">
-          <span className="rounded-full bg-indigo-500/10 px-3 py-1 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-200">
-            Étape 2/3
-          </span>
-          <span>Source</span>
-          <span>→</span>
-          <span>Personnalisation</span>
-          <span>→</span>
-          <span>Partage</span>
-        </div>
-      </header>
 
       {!activeSource ? (
         <section className="space-y-8 rounded-3xl border border-dashed border-zinc-300 bg-white/80 p-10 text-center shadow-sm dark:border-white/20 dark:bg-white/5">
