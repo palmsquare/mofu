@@ -1,5 +1,6 @@
 import { NextResponse, NextRequest } from "next/server";
 import { createApiSupabaseClient } from "../../../../lib/supabase-api-client";
+import { createSupabaseAdminClient } from "../../../../lib/supabase-admin-client";
 
 export async function GET(request: NextRequest) {
   try {
@@ -12,18 +13,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ isAdmin: false });
     }
 
-    // Check if user is admin
-    const { data: adminUser, error: adminError } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
+    // Use admin client to bypass RLS and check if user is admin
+    try {
+      const adminSupabase = createSupabaseAdminClient();
+      const { data: adminUser, error: adminError } = await adminSupabase
+        .from('admin_users')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
 
-    if (adminError || !adminUser) {
+      if (adminError || !adminUser) {
+        return NextResponse.json({ isAdmin: false });
+      }
+
+      return NextResponse.json({ isAdmin: true });
+    } catch (error) {
+      console.error("[auth/check-admin][GET] Admin check error:", error);
       return NextResponse.json({ isAdmin: false });
     }
-
-    return NextResponse.json({ isAdmin: true });
   } catch (error) {
     console.error("[auth/check-admin][GET] error:", error);
     return NextResponse.json({ isAdmin: false });
