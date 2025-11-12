@@ -85,15 +85,34 @@ export default async function DashboardPage() {
   let isAdmin = false;
   try {
     const adminSupabase = createSupabaseAdminClient();
-    const { data: adminUser } = await adminSupabase
+    const { data: adminUser, error: adminError } = await adminSupabase
       .from('admin_users')
       .select('*')
       .eq('user_id', user.id)
       .single();
     
-    isAdmin = !!adminUser;
+    if (adminError) {
+      console.error('[dashboard] Admin check error:', adminError);
+      console.error('[dashboard] Error code:', adminError.code);
+      console.error('[dashboard] Error message:', adminError.message);
+      console.error('[dashboard] User ID:', user.id);
+      console.error('[dashboard] User email:', user.email);
+      
+      // If table doesn't exist or no rows found, user is not admin
+      if (adminError.code === '42P01' || adminError.code === 'PGRST116') {
+        console.log('[dashboard] User is not an admin (table does not exist or no rows found)');
+        isAdmin = false;
+      } else {
+        // For other errors, log and assume not admin
+        console.error('[dashboard] Unknown error checking admin status');
+        isAdmin = false;
+      }
+    } else {
+      isAdmin = !!adminUser;
+      console.log('[dashboard] Admin check result:', { isAdmin, userEmail: user.email, userId: user.id });
+    }
   } catch (error) {
-    console.error('[dashboard] Error checking admin status:', error);
+    console.error('[dashboard] Unexpected error checking admin status:', error);
     // If error, assume user is not admin
     isAdmin = false;
   }
