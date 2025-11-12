@@ -14,11 +14,23 @@ let cachedBrowserClient: SupabaseClient | null = null;
 
 export const supabaseBrowserClient = () => {
   if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Supabase n'est pas configuré côté client.");
+    const error = `Supabase n'est pas configuré côté client. URL: ${supabaseUrl ? '✅' : '❌'}, Key: ${supabaseAnonKey ? '✅' : '❌'}`;
+    console.error(error);
+    throw new Error(error);
   }
 
   if (!cachedBrowserClient) {
-    cachedBrowserClient = createClient(supabaseUrl, supabaseAnonKey);
+    try {
+      cachedBrowserClient = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+        },
+      });
+    } catch (error) {
+      console.error("Erreur lors de la création du client Supabase:", error);
+      throw new Error("Impossible de créer le client Supabase. Vérifie tes variables d'environnement.");
+    }
   }
 
   return cachedBrowserClient;
