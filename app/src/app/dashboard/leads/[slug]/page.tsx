@@ -74,8 +74,16 @@ export default async function LeadsPage({
   const fourteenDaysAgo = new Date();
   fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
 
-  // Get page views and conversions
+  // Get page views and conversions (get all, not just last 14 days for lead source matching)
   const { data: pageViews, error: viewsError } = await supabase
+    .from('page_views')
+    .select('*')
+    .eq('lead_magnet_slug', slug)
+    .eq('owner_id', user.id)
+    .order('created_at', { ascending: true });
+  
+  // Also get last 14 days for chart
+  const { data: pageViewsLast14Days } = await supabase
     .from('page_views')
     .select('*')
     .eq('lead_magnet_slug', slug)
@@ -87,10 +95,14 @@ export default async function LeadsPage({
     console.error('Error fetching page views:', viewsError);
   }
 
-  // Calculate stats
-  const views = pageViews?.filter((pv) => pv.event_type === 'view').length || 0;
-  const conversions = pageViews?.filter((pv) => pv.event_type === 'conversion').length || 0;
+  // Calculate stats (use last 14 days for display)
+  const views = pageViewsLast14Days?.filter((pv) => pv.event_type === 'view').length || 0;
+  const conversions = pageViewsLast14Days?.filter((pv) => pv.event_type === 'conversion').length || 0;
   const conversionRate = views > 0 ? (conversions / views) * 100 : 0;
+  
+  // Total stats (all time)
+  const totalViews = pageViews?.filter((pv) => pv.event_type === 'view').length || 0;
+  const totalConversions = pageViews?.filter((pv) => pv.event_type === 'conversion').length || 0;
 
   // Group by day for chart
   const dailyDataMap = new Map<string, { views: number; conversions: number }>();
@@ -103,8 +115,8 @@ export default async function LeadsPage({
     dailyDataMap.set(dateStr, { views: 0, conversions: 0 });
   }
 
-  // Fill with actual data
-  pageViews?.forEach((pv) => {
+  // Fill with actual data (use last 14 days)
+  pageViewsLast14Days?.forEach((pv) => {
     const date = new Date(pv.created_at);
     const dateStr = date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
     const dayData = dailyDataMap.get(dateStr) || { views: 0, conversions: 0 };
@@ -149,7 +161,7 @@ export default async function LeadsPage({
                 {leadMagnet.title}
               </h1>
               <p className="text-sm text-gray-600 mt-1">
-                {parsedLeads?.length || 0} leads collectés • {views} vues • {conversions} conversions
+                {parsedLeads?.length || 0} leads collectés • {totalViews} vues totales • {totalConversions} conversions totales
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -232,7 +244,10 @@ export default async function LeadsPage({
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Date
                     </th>
-                    {fieldKeys.map((key) => (
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Contact
+                    </th>
+                    {fieldKeys.filter(key => key !== 'field-email' && key !== 'field-name' && key !== 'email' && key !== 'name').map((key) => (
                       <th
                         key={key}
                         className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -240,24 +255,67 @@ export default async function LeadsPage({
                         {key}
                       </th>
                     ))}
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Source
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {parsedLeads.map((lead) => (
-                    <tr key={lead.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(lead.created_at).toLocaleString('fr-FR')}
-                      </td>
-                      {fieldKeys.map((key) => (
-                        <td
-                          key={key}
-                          className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
-                        >
-                          {String(lead.form_data?.[key] || '')}
+                  {parsedLeads.map((lead) => {
+                    const leadEmail = lead.lead_email || lead.form_data?.['field-email'] || lead.form_data?.['email'] || '';
+                    const leadName = lead.lead_name || lead.form_data?.['field-name'] || lead.form_data?.['name'] || '';
+                    
+                    // Get UTM source from page views
+                    const leadUtmSource = pageViews?.find((pv) => 
+                      pv.event_type === 'conversion' && 
+                      new Date(pv.created_at).getTime() - new Date(lead.created_at).getTime() < 60000
+                    )?.utm_source || 'Direct';
+                    
+                    const otherFields = fieldKeys.filter(key => 
+                      key !== 'field-email' && key !== 'field-name' && key !== 'email' && key !== 'name'
+                    );
+                    
+                    return (
+                      <tr key={lead.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <Link href={`/dashboard/leads/${slug}/${lead.id}`} className="hover:text-blue-600">
+                            {new Date(lead.created_at).toLocaleString('fr-FR')}
+                          </Link>
                         </td>
-                      ))}
-                    </tr>
-                  ))}
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <Link href={`/dashboard/leads/${slug}/${lead.id}`} className="hover:text-blue-600">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-semibold text-indigo-600">
+                                {(leadName || leadEmail || 'L').charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{leadName || 'Sans nom'}</p>
+                                <p className="text-xs text-gray-500">{leadEmail || 'Sans email'}</p>
+                              </div>
+                            </div>
+                          </Link>
+                        </td>
+                        {otherFields.map((key) => (
+                          <td
+                            key={key}
+                            className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
+                          >
+                            <Link href={`/dashboard/leads/${slug}/${lead.id}`} className="hover:text-blue-600">
+                              {String(lead.form_data?.[key] || '')}
+                            </Link>
+                          </td>
+                        ))}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          <Link href={`/dashboard/leads/${slug}/${lead.id}`} className="hover:text-blue-600">
+                            <span className="inline-flex items-center gap-1">
+                              <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                              {leadUtmSource}
+                            </span>
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
