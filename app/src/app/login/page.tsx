@@ -27,9 +27,12 @@ export default function LoginPage() {
       if (error) throw error;
 
       if (data.user && data.session) {
-        // Redirect immediately - the dashboard will claim anonymous lead magnets
-        router.push('/dashboard');
-        router.refresh();
+        // Wait a bit for session to be fully established, then redirect
+        // The dashboard will automatically claim anonymous lead magnets
+        setTimeout(() => {
+          router.push('/dashboard');
+          router.refresh();
+        }, 300);
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Une erreur est survenue');

@@ -33,9 +33,12 @@ export default function SignupPage() {
       if (data.user) {
         // If email confirmation is disabled, user is automatically logged in
         if (data.session) {
-          // Redirect immediately - the dashboard will claim anonymous lead magnets
-          router.push('/dashboard');
-          router.refresh();
+          // Wait a bit for session to be fully established, then redirect
+          // The dashboard will automatically claim anonymous lead magnets
+          setTimeout(() => {
+            router.push('/dashboard');
+            router.refresh();
+          }, 300);
         } else {
           // Email confirmation required
           setSuccess(true);
