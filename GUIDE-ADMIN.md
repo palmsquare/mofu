@@ -137,10 +137,14 @@ Une fois l'utilisateur admin créé, tu peux accéder à l'espace admin :
 ### Méthode 1 : Script automatique (recommandé)
 
 1. **Crée un compte utilisateur** sur ton site (email + mot de passe)
-2. **Exécute le script** depuis la racine du projet :
+2. **Exécute le script** depuis le dossier `app` :
    ```bash
    cd app
    npm run create:admin ton@email.com
+   ```
+   Ou depuis la racine du projet :
+   ```bash
+   node scripts/create-admin.js ton@email.com
    ```
 3. **Connecte-toi** avec ton compte utilisateur normal
 4. **Va sur `/admin`** - tu auras maintenant accès à l'espace admin
