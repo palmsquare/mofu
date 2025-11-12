@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { supabaseServerClient } from "../../../lib/supabase-client";
 
 export async function POST(request: Request) {
-  let body: { leadMagnetId?: string; data?: unknown; consentGranted?: unknown };
+  let body: { leadMagnetId?: string; leadMagnetSlug?: string; data?: unknown; consentGranted?: unknown };
 
   try {
     body = (await request.json()) as typeof body;
@@ -12,8 +12,8 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Payload JSON requis." }, { status: 400 });
   }
 
-  if (!body || typeof body.leadMagnetId !== "string") {
-    return NextResponse.json({ error: "leadMagnetId est requis." }, { status: 422 });
+  if (!body || (!body.leadMagnetId && !body.leadMagnetSlug)) {
+    return NextResponse.json({ error: "leadMagnetId ou leadMagnetSlug est requis." }, { status: 422 });
   }
 
   if (typeof body.data !== "object" || body.data === null) {
@@ -22,11 +22,18 @@ export async function POST(request: Request) {
 
   const supabase = supabaseServerClient();
 
-  const { data: leadMagnet, error: leadMagnetError } = await supabase
+  // Query by ID or slug
+  let query = supabase
     .from("lead_magnets")
-    .select("id, slug, download_limit")
-    .eq("id", body.leadMagnetId)
-    .maybeSingle();
+    .select("id, slug, download_limit, resource_url, resource_type");
+
+  if (body.leadMagnetId) {
+    query = query.eq("id", body.leadMagnetId);
+  } else if (body.leadMagnetSlug) {
+    query = query.eq("slug", body.leadMagnetSlug);
+  }
+
+  const { data: leadMagnet, error: leadMagnetError } = await query.maybeSingle();
 
   if (leadMagnetError) {
     console.error("[leads][POST] lead magnet lookup error", leadMagnetError);
@@ -77,7 +84,8 @@ export async function POST(request: Request) {
     data: {
       id: insertResult.id,
       createdAt: insertResult.created_at,
-      downloadUrl: leadMagnet.slug ? `https://lead.plus/${leadMagnet.slug}` : null,
+      resourceUrl: leadMagnet.resource_url,
+      resourceType: leadMagnet.resource_type,
     },
   });
 }

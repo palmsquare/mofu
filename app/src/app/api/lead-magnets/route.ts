@@ -2,7 +2,9 @@ import { NextResponse } from "next/server";
 
 import { supabaseServerClient } from "../../../lib/supabase-client";
 
-const SHARE_URL_BASE = "https://lead.plus/";
+const SHARE_URL_BASE = process.env.NEXT_PUBLIC_SITE_URL 
+  ? `${process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}/c/`
+  : "http://localhost:3000/c/";
 const DEFAULT_DOWNLOAD_LIMIT = 50;
 const DEFAULT_CTA = "Recevoir la ressource";
 const DEFAULT_NOTE = "+ 1000 personnes accompagnées";
@@ -144,7 +146,7 @@ export async function POST(request: Request) {
   return NextResponse.json({
     data: {
       ...data,
-      shareUrl: `${SHARE_URL_BASE}${data.slug}`,
+      shareUrl: data.slug ? `${SHARE_URL_BASE}${data.slug}` : null,
     },
   });
 }
