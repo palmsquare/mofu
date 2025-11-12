@@ -2,6 +2,7 @@ import { redirect } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabase-server';
 import Link from 'next/link';
 import { ExportButton } from './export-button';
+import { StatsClient } from './stats-client';
 
 export default async function LeadsPage({
   params,
@@ -69,6 +70,68 @@ export default async function LeadsPage({
   });
   const fieldKeys = Array.from(allFieldKeys);
 
+  // Fetch analytics data
+  const fourteenDaysAgo = new Date();
+  fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+  // Get page views and conversions
+  const { data: pageViews, error: viewsError } = await supabase
+    .from('page_views')
+    .select('*')
+    .eq('lead_magnet_slug', slug)
+    .eq('owner_id', user.id)
+    .gte('created_at', fourteenDaysAgo.toISOString())
+    .order('created_at', { ascending: true });
+
+  if (viewsError) {
+    console.error('Error fetching page views:', viewsError);
+  }
+
+  // Calculate stats
+  const views = pageViews?.filter((pv) => pv.event_type === 'view').length || 0;
+  const conversions = pageViews?.filter((pv) => pv.event_type === 'conversion').length || 0;
+  const conversionRate = views > 0 ? (conversions / views) * 100 : 0;
+
+  // Group by day for chart
+  const dailyDataMap = new Map<string, { views: number; conversions: number }>();
+  
+  // Initialize last 14 days
+  for (let i = 13; i >= 0; i--) {
+    const date = new Date();
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    dailyDataMap.set(dateStr, { views: 0, conversions: 0 });
+  }
+
+  // Fill with actual data
+  pageViews?.forEach((pv) => {
+    const date = new Date(pv.created_at);
+    const dateStr = date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+    const dayData = dailyDataMap.get(dateStr) || { views: 0, conversions: 0 };
+    
+    if (pv.event_type === 'view') {
+      dayData.views++;
+    } else if (pv.event_type === 'conversion') {
+      dayData.conversions++;
+    }
+    
+    dailyDataMap.set(dateStr, dayData);
+  });
+
+  const dailyData = Array.from(dailyDataMap.entries()).map(([date, data]) => ({
+    date,
+    views: data.views,
+    conversions: data.conversions,
+  }));
+
+  // Get UTM sources
+  const utmSources = new Map<string, number>();
+  pageViews?.forEach((pv) => {
+    if (pv.utm_source) {
+      utmSources.set(pv.utm_source, (utmSources.get(pv.utm_source) || 0) + 1);
+    }
+  });
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Header */}
@@ -86,7 +149,7 @@ export default async function LeadsPage({
                 {leadMagnet.title}
               </h1>
               <p className="text-sm text-gray-600 mt-1">
-                {parsedLeads?.length || 0} leads collectés
+                {parsedLeads?.length || 0} leads collectés • {views} vues • {conversions} conversions
               </p>
             </div>
             <div className="flex items-center gap-4">
@@ -105,7 +168,38 @@ export default async function LeadsPage({
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Stats Section */}
+        <div className="mb-8">
+          <StatsClient
+            views={views}
+            conversions={conversions}
+            conversionRate={conversionRate}
+            dailyData={dailyData}
+          />
+        </div>
+
+        {/* UTM Sources */}
+        {utmSources.size > 0 && (
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 mb-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Sources de trafic</h3>
+            <div className="space-y-2">
+              {Array.from(utmSources.entries())
+                .sort((a, b) => b[1] - a[1])
+                .map(([source, count]) => (
+                  <div key={source} className="flex items-center justify-between">
+                    <span className="text-sm text-gray-700">{source}</span>
+                    <span className="text-sm font-semibold text-gray-900">{count} visites</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* Leads Table */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h3 className="text-lg font-semibold text-gray-900">Leads collectés</h3>
+          </div>
           {!parsedLeads || parsedLeads.length === 0 ? (
             <div className="px-6 py-12 text-center">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">

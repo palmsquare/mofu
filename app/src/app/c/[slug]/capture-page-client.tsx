@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 type LeadMagnet = {
@@ -72,6 +72,9 @@ export function CapturePageClient({ leadMagnet }: CapturePageClientProps) {
 
       const result = await response.json();
 
+      // Track conversion
+      await trackConversion();
+
       // Redirect to resource
       if (result.data.resourceUrl) {
         if (result.data.resourceType === "link") {
@@ -85,6 +88,64 @@ export function CapturePageClient({ leadMagnet }: CapturePageClientProps) {
       console.error("Submit error:", err);
       setError("Erreur réseau lors de la soumission du formulaire");
       setIsSubmitting(false);
+    }
+  };
+
+  // Track page view on mount
+  useEffect(() => {
+    const trackView = async () => {
+      try {
+        // Get UTM parameters from URL
+        const params = new URLSearchParams(window.location.search);
+        const utm_source = params.get("utm_source");
+        const utm_medium = params.get("utm_medium");
+        const utm_campaign = params.get("utm_campaign");
+
+        await fetch("/api/analytics/track", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            event: "view",
+            leadMagnetSlug: leadMagnet.slug,
+            metadata: {
+              utm_source,
+              utm_medium,
+              utm_campaign,
+            },
+          }),
+        });
+      } catch (error) {
+        console.error("Failed to track view:", error);
+        // Silent fail - don't break the page
+      }
+    };
+
+    // Small delay to ensure page is loaded
+    const timeoutId = setTimeout(trackView, 500);
+    return () => clearTimeout(timeoutId);
+  }, [leadMagnet.slug]);
+
+  // Track conversion when form is submitted
+  const trackConversion = async () => {
+    try {
+      await fetch("/api/analytics/track", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          event: "conversion",
+          leadMagnetSlug: leadMagnet.slug,
+          metadata: {
+            form_data: formData,
+          },
+        }),
+      });
+    } catch (error) {
+      console.error("Failed to track conversion:", error);
+      // Silent fail
     }
   };
 

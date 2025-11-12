@@ -61,6 +61,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Quota de téléchargements atteint." }, { status: 429 });
   }
 
+  // Extract email and name from form data for easier querying
+  const formDataObj = body.data as Record<string, unknown>;
+  const leadEmail = formDataObj["field-email"] || formDataObj["email"] || null;
+  const leadName = formDataObj["field-name"] || formDataObj["name"] || null;
+
   // Assign lead to the lead magnet owner (not the prospect who submitted the form)
   // This way leads appear in the dashboard of the lead magnet creator
   const { data: insertResult, error: insertError } = await supabase
@@ -71,6 +76,8 @@ export async function POST(request: Request) {
       form_data: body.data,
       consent_granted: Boolean(body.consentGranted),
       owner_id: leadMagnet.owner_id || null, // Assign to lead magnet owner
+      lead_email: typeof leadEmail === "string" ? leadEmail : null,
+      lead_name: typeof leadName === "string" ? leadName : null,
     })
     .select("id, created_at")
     .single();
