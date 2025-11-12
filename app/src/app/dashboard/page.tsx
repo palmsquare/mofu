@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabase } from '@/lib/supabase-server';
+import { createSupabaseAdminClient } from '@/lib/supabase-admin-client';
 import Link from 'next/link';
 import { DashboardClient } from './dashboard-client';
 import { QuotasDisplay } from '@/components/quotas-display';
@@ -80,14 +81,22 @@ export default async function DashboardPage() {
     })
   );
 
-  // Check if user is admin
-  const { data: adminUser } = await supabase
-    .from('admin_users')
-    .select('*')
-    .eq('user_id', user.id)
-    .single();
-
-  const isAdmin = !!adminUser;
+  // Check if user is admin using admin client to bypass RLS
+  let isAdmin = false;
+  try {
+    const adminSupabase = createSupabaseAdminClient();
+    const { data: adminUser } = await adminSupabase
+      .from('admin_users')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+    
+    isAdmin = !!adminUser;
+  } catch (error) {
+    console.error('[dashboard] Error checking admin status:', error);
+    // If error, assume user is not admin
+    isAdmin = false;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
