@@ -71,13 +71,33 @@ export async function POST(request: NextRequest) {
     // Get user agent and IP from request
     const userAgent = request.headers.get("user-agent") || "";
     const ip = request.headers.get("x-forwarded-for") || request.headers.get("x-real-ip") || "";
-    const referer = request.headers.get("referer") || "";
+    const referer = request.headers.get("referer") || null;
 
-    // Extract UTM parameters from referer or metadata
-    const url = new URL(referer || `https://example.com?${metadata?.utm || ""}`);
-    const utmSource = url.searchParams.get("utm_source") || metadata?.utm_source || null;
-    const utmMedium = url.searchParams.get("utm_medium") || metadata?.utm_medium || null;
-    const utmCampaign = url.searchParams.get("utm_campaign") || metadata?.utm_campaign || null;
+    // Extract UTM parameters from metadata (passed from client)
+    const utmSource = metadata?.utm_source || null;
+    const utmMedium = metadata?.utm_medium || null;
+    const utmCampaign = metadata?.utm_campaign || null;
+    
+    // Also try to extract from referer if available
+    let refererUtmSource = null;
+    let refererUtmMedium = null;
+    let refererUtmCampaign = null;
+    
+    if (referer) {
+      try {
+        const refererUrl = new URL(referer);
+        refererUtmSource = refererUrl.searchParams.get("utm_source");
+        refererUtmMedium = refererUrl.searchParams.get("utm_medium");
+        refererUtmCampaign = refererUrl.searchParams.get("utm_campaign");
+      } catch (e) {
+        // Invalid URL, ignore
+      }
+    }
+    
+    // Use metadata first, then referer
+    const finalUtmSource = utmSource || refererUtmSource || null;
+    const finalUtmMedium = utmMedium || refererUtmMedium || null;
+    const finalUtmCampaign = utmCampaign || refererUtmCampaign || null;
 
     // Get lead magnet to find owner
     const supabase = supabaseServerClient();
@@ -100,10 +120,10 @@ export async function POST(request: NextRequest) {
         event_type: event, // 'view', 'click', 'conversion'
         user_agent: userAgent,
         ip_address: ip.split(",")[0].trim(), // Take first IP if multiple
-        referer: referer || null,
-        utm_source: utmSource,
-        utm_medium: utmMedium,
-        utm_campaign: utmCampaign,
+        referer: referer,
+        utm_source: finalUtmSource,
+        utm_medium: finalUtmMedium,
+        utm_campaign: finalUtmCampaign,
         metadata: metadata || {},
         owner_id: leadMagnet.owner_id,
       });

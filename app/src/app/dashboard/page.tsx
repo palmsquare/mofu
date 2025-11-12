@@ -55,6 +55,30 @@ export default async function DashboardPage() {
     leads: lm.leads && lm.leads.length > 0 ? lm.leads : [{ count: 0 }],
   }));
 
+  // Get analytics for each lead magnet (views and conversions)
+  const leadMagnetsWithStats = await Promise.all(
+    allLeadMagnets.map(async (lm) => {
+      const { data: pageViews } = await supabase
+        .from('page_views')
+        .select('event_type')
+        .eq('lead_magnet_slug', lm.slug)
+        .eq('owner_id', user.id);
+
+      const views = pageViews?.filter((pv) => pv.event_type === 'view').length || 0;
+      const conversions = pageViews?.filter((pv) => pv.event_type === 'conversion').length || 0;
+      const conversionRate = views > 0 ? (conversions / views) * 100 : 0;
+
+      return {
+        ...lm,
+        stats: {
+          views,
+          conversions,
+          conversionRate,
+        },
+      };
+    })
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Header */}
@@ -89,7 +113,7 @@ export default async function DashboardPage() {
               <div>
                 <p className="text-sm text-gray-600 mb-1">Lead Magnets</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {allLeadMagnets?.length || 0}
+                  {leadMagnetsWithStats?.length || 0}
                 </p>
               </div>
               <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
@@ -115,7 +139,7 @@ export default async function DashboardPage() {
               <div>
                 <p className="text-sm text-gray-600 mb-1">Total Leads</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {allLeadMagnets?.reduce(
+                  {leadMagnetsWithStats?.reduce(
                     (acc, lm) => acc + (lm.leads?.[0]?.count || 0),
                     0
                   ) || 0}
@@ -142,17 +166,15 @@ export default async function DashboardPage() {
           <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Taux de conversion</p>
+                <p className="text-sm text-gray-600 mb-1">Taux de conversion moyen</p>
                 <p className="text-3xl font-bold text-gray-900">
-                  {allLeadMagnets && allLeadMagnets.length > 0
-                    ? Math.round(
-                        (allLeadMagnets.reduce(
-                          (acc, lm) => acc + (lm.leads?.[0]?.count || 0),
-                          0
-                        ) /
-                          allLeadMagnets.length) *
-                          100
-                      )
+                  {leadMagnetsWithStats && leadMagnetsWithStats.length > 0
+                    ? (() => {
+                        const magnetsWithViews = leadMagnetsWithStats.filter((lm) => lm.stats.views > 0);
+                        if (magnetsWithViews.length === 0) return 0;
+                        const totalRate = magnetsWithViews.reduce((acc, lm) => acc + lm.stats.conversionRate, 0);
+                        return Math.round(totalRate / magnetsWithViews.length);
+                      })()
                     : 0}
                   %
                 </p>
@@ -184,7 +206,7 @@ export default async function DashboardPage() {
             </h2>
           </div>
 
-          {!allLeadMagnets || allLeadMagnets.length === 0 ? (
+          {!leadMagnetsWithStats || leadMagnetsWithStats.length === 0 ? (
             <div className="px-6 py-12 text-center">
               <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <svg
@@ -211,7 +233,7 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="divide-y divide-gray-200">
-              {allLeadMagnets.map((magnet) => (
+              {leadMagnetsWithStats.map((magnet) => (
                 <div
                   key={magnet.slug}
                   className="px-6 py-4 hover:bg-gray-50 transition-colors"
@@ -236,6 +258,18 @@ export default async function DashboardPage() {
                         <span className="font-medium text-blue-600">
                           {magnet.leads?.[0]?.count || 0} leads
                         </span>
+                        {magnet.stats.views > 0 && (
+                          <>
+                            <span>•</span>
+                            <span className="font-medium text-green-600">
+                              {magnet.stats.views} vues
+                            </span>
+                            <span>•</span>
+                            <span className="font-medium text-purple-600">
+                              {magnet.stats.conversionRate.toFixed(1)}% conv.
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                     <div className="flex items-center gap-3 ml-4">
