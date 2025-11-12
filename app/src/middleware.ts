@@ -54,17 +54,38 @@ export async function middleware(request: NextRequest) {
     }
   );
 
+  // Get the pathname
+  const pathname = request.nextUrl.pathname;
+
+  // Don't check auth for login, signup, or public routes
+  if (
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/signup') ||
+    pathname === '/' ||
+    pathname.startsWith('/c/') ||
+    pathname.startsWith('/builder') ||
+    pathname.startsWith('/api/')
+  ) {
+    // Refresh session but don't redirect
+    await supabase.auth.getUser();
+    return response;
+  }
+
   // Refresh session if expired
   await supabase.auth.getUser();
 
   // Protect dashboard routes
-  if (request.nextUrl.pathname.startsWith('/dashboard')) {
+  if (pathname.startsWith('/dashboard')) {
     const {
       data: { user },
     } = await supabase.auth.getUser();
 
     if (!user) {
-      return NextResponse.redirect(new URL('/login', request.url));
+      // Redirect to login if not authenticated
+      const loginUrl = new URL('/login', request.url);
+      // Add a return URL so user can be redirected back after login
+      loginUrl.searchParams.set('redirect', pathname);
+      return NextResponse.redirect(loginUrl);
     }
   }
 
@@ -78,9 +99,10 @@ export const config = {
      * - _next/static (static files)
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
+     * - api routes (handled separately)
      * Feel free to modify this pattern to include more paths.
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };
 

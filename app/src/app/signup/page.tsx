@@ -35,6 +35,7 @@ export default function SignupPage() {
         if (data.session) {
           // createBrowserClient from @supabase/ssr handles cookies automatically
           // Use window.location.href to force a full page reload so cookies are sent
+          // The dashboard will automatically claim anonymous lead magnets
           setTimeout(() => {
             window.location.href = '/dashboard';
           }, 500);
