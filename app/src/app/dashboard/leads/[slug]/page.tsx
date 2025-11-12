@@ -136,6 +136,25 @@ export default async function LeadsPage({
     conversions: data.conversions,
   }));
 
+  // Create a map of lead creation times to UTM sources for faster lookup
+  const leadUtmMap = new Map<string, string>();
+  parsedLeads.forEach((lead) => {
+    const leadTime = new Date(lead.created_at).getTime();
+    // Find conversion event closest to lead creation
+    const matchingConversion = pageViews?.find((pv) => 
+      pv.event_type === 'conversion' && 
+      Math.abs(new Date(pv.created_at).getTime() - leadTime) < 5 * 60 * 1000
+    );
+    const matchingView = !matchingConversion 
+      ? pageViews?.find((pv) => 
+          pv.event_type === 'view' && 
+          new Date(pv.created_at).getTime() <= leadTime &&
+          leadTime - new Date(pv.created_at).getTime() < 24 * 60 * 60 * 1000
+        )
+      : null;
+    leadUtmMap.set(lead.id, matchingConversion?.utm_source || matchingView?.utm_source || 'Direct');
+  });
+
   // Get UTM sources
   const utmSources = new Map<string, number>();
   pageViews?.forEach((pv) => {
@@ -264,12 +283,7 @@ export default async function LeadsPage({
                   {parsedLeads.map((lead) => {
                     const leadEmail = lead.lead_email || lead.form_data?.['field-email'] || lead.form_data?.['email'] || '';
                     const leadName = lead.lead_name || lead.form_data?.['field-name'] || lead.form_data?.['name'] || '';
-                    
-                    // Get UTM source from page views
-                    const leadUtmSource = pageViews?.find((pv) => 
-                      pv.event_type === 'conversion' && 
-                      new Date(pv.created_at).getTime() - new Date(lead.created_at).getTime() < 60000
-                    )?.utm_source || 'Direct';
+                    const leadUtmSource = leadUtmMap.get(lead.id) || 'Direct';
                     
                     const otherFields = fieldKeys.filter(key => 
                       key !== 'field-email' && key !== 'field-name' && key !== 'email' && key !== 'name'
@@ -279,18 +293,24 @@ export default async function LeadsPage({
                       <tr key={lead.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           <Link href={`/dashboard/leads/${slug}/${lead.id}`} className="hover:text-blue-600">
-                            {new Date(lead.created_at).toLocaleString('fr-FR')}
+                            {new Date(lead.created_at).toLocaleString('fr-FR', {
+                              day: '2-digit',
+                              month: '2-digit',
+                              year: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })}
                           </Link>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <Link href={`/dashboard/leads/${slug}/${lead.id}`} className="hover:text-blue-600">
+                          <Link href={`/dashboard/leads/${slug}/${lead.id}`} className="hover:text-blue-600 block">
                             <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-semibold text-indigo-600">
+                              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-semibold text-indigo-600 flex-shrink-0">
                                 {(leadName || leadEmail || 'L').charAt(0).toUpperCase()}
                               </div>
-                              <div>
-                                <p className="text-sm font-medium text-gray-900">{leadName || 'Sans nom'}</p>
-                                <p className="text-xs text-gray-500">{leadEmail || 'Sans email'}</p>
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-gray-900 truncate">{leadName || 'Sans nom'}</p>
+                                <p className="text-xs text-gray-500 truncate">{leadEmail || 'Sans email'}</p>
                               </div>
                             </div>
                           </Link>
@@ -300,15 +320,15 @@ export default async function LeadsPage({
                             key={key}
                             className="px-6 py-4 whitespace-nowrap text-sm text-gray-900"
                           >
-                            <Link href={`/dashboard/leads/${slug}/${lead.id}`} className="hover:text-blue-600">
+                            <Link href={`/dashboard/leads/${slug}/${lead.id}`} className="hover:text-blue-600 block truncate max-w-xs">
                               {String(lead.form_data?.[key] || '')}
                             </Link>
                           </td>
                         ))}
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                           <Link href={`/dashboard/leads/${slug}/${lead.id}`} className="hover:text-blue-600">
-                            <span className="inline-flex items-center gap-1">
-                              <span className="w-2 h-2 rounded-full bg-indigo-500"></span>
+                            <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-indigo-50 text-indigo-700 text-xs font-medium">
+                              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>
                               {leadUtmSource}
                             </span>
                           </Link>

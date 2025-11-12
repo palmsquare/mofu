@@ -163,36 +163,82 @@ export default async function LeadDetailPage({
 
             {/* Activity Timeline */}
             <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Activité récente</h2>
-              <div className="space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Activité récente</h2>
+                <span className="text-xs text-gray-500">Dernière mise à jour: {new Date().toLocaleString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+              </div>
+              <div className="space-y-6">
                 {activity && activity.length > 0 ? (
-                  activity.slice(0, 10).map((event) => (
-                    <div key={event.id} className="flex items-start gap-4 pb-4 border-b border-gray-100 last:border-0">
-                      <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
-                        {event.event_type === 'view' ? (
-                          <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                          </svg>
-                        ) : (
-                          <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
+                  <>
+                    {/* Recent Conversions */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700 mb-3">Conversions ({totalConversions})</h3>
+                      <div className="space-y-2">
+                        {activity
+                          .filter((e) => e.event_type === 'conversion')
+                          .slice(0, 5)
+                          .map((event) => (
+                            <div key={event.id} className="flex items-start gap-3 p-3 bg-green-50 rounded-lg border border-green-100">
+                              <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                                <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-gray-900">Nouvelle conversion</p>
+                                <p className="text-xs text-gray-600">via {leadMagnet.slug}</p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {new Date(event.created_at).toLocaleString('fr-FR')}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        {activity.filter((e) => e.event_type === 'conversion').length === 0 && (
+                          <p className="text-sm text-gray-500">Aucune conversion récente</p>
                         )}
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900">
-                          {event.event_type === 'view' ? 'Page visitée' : 'Conversion'}
-                        </p>
-                        <p className="text-xs text-gray-600">
-                          {event.referer ? `via ${new URL(event.referer).hostname}` : 'Direct'}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {new Date(event.created_at).toLocaleString('fr-FR')}
-                        </p>
+                    </div>
+                    
+                    {/* Recent Views */}
+                    <div>
+                      <h3 className="text-sm font-semibold text-gray-700 mb-3">Vues récentes ({totalViews})</h3>
+                      <div className="space-y-2 max-h-64 overflow-y-auto">
+                        {activity
+                          .filter((e) => e.event_type === 'view')
+                          .slice(0, 10)
+                          .map((event) => (
+                            <div key={event.id} className="flex items-start gap-3 p-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 rounded">
+                              <div className="w-6 h-6 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                                <svg className="w-3 h-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs text-gray-600">
+                                  {event.referer ? (
+                                    <>
+                                      via <span className="font-medium">{new URL(event.referer).hostname}</span>
+                                      {event.utm_source && (
+                                        <span className="ml-2 text-xs text-gray-500">({event.utm_source})</span>
+                                      )}
+                                    </>
+                                  ) : (
+                                    'Direct'
+                                  )}
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  {new Date(event.created_at).toLocaleString('fr-FR')}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        {activity.filter((e) => e.event_type === 'view').length === 0 && (
+                          <p className="text-sm text-gray-500">Aucune vue récente</p>
+                        )}
                       </div>
                     </div>
-                  ))
+                  </>
                 ) : (
                   <p className="text-sm text-gray-600">Aucune activité récente</p>
                 )}
