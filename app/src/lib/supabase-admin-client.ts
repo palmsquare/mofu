@@ -10,7 +10,13 @@ export function createSupabaseAdminClient() {
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
   if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Missing Supabase URL or Service Role Key');
+    const missingVars = [];
+    if (!supabaseUrl) missingVars.push('NEXT_PUBLIC_SUPABASE_URL');
+    if (!serviceRoleKey) missingVars.push('SUPABASE_SERVICE_ROLE_KEY');
+    
+    const errorMessage = `Missing required environment variables: ${missingVars.join(', ')}. Please check your Vercel environment variables.`;
+    console.error('[supabase-admin-client]', errorMessage);
+    throw new Error(errorMessage);
   }
 
   return createClient(supabaseUrl, serviceRoleKey, {

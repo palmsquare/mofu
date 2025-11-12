@@ -17,7 +17,15 @@ export default async function AdminPage() {
   // Use admin client to bypass RLS and check if user is admin
   // This allows us to check admin status even if RLS policies are restrictive
   try {
-    const adminSupabase = createSupabaseAdminClient();
+    let adminSupabase;
+    try {
+      adminSupabase = createSupabaseAdminClient();
+    } catch (clientError) {
+      console.error('[admin/page] Failed to create admin client:', clientError);
+      console.error('[admin/page] This usually means SUPABASE_SERVICE_ROLE_KEY is not set on Vercel');
+      console.error('[admin/page] Check Vercel Environment Variables: Settings → Environment Variables');
+      redirect('/dashboard');
+    }
     
     // Check if user is admin using admin client (bypasses RLS)
     const { data: adminUser, error: adminError } = await adminSupabase

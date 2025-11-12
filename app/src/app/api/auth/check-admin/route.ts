@@ -15,18 +15,31 @@ export async function GET(request: NextRequest) {
 
     // Use admin client to bypass RLS and check if user is admin
     try {
-      const adminSupabase = createSupabaseAdminClient();
-      const { data: adminUser, error: adminError } = await adminSupabase
-        .from('admin_users')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
-
-      if (adminError || !adminUser) {
-        return NextResponse.json({ isAdmin: false });
+      let adminSupabase;
+      try {
+        adminSupabase = createSupabaseAdminClient();
+      } catch (clientError) {
+        console.error("[auth/check-admin][GET] Failed to create admin client:", clientError);
+        console.error("[auth/check-admin][GET] This usually means SUPABASE_SERVICE_ROLE_KEY is not set on Vercel");
+        console.error("[auth/check-admin][GET] Check Vercel Environment Variables: Settings → Environment Variables");
+        return NextResponse.json({ isAdmin: false, error: "Admin client not available" });
       }
 
-      return NextResponse.json({ isAdmin: true });
+      if (adminSupabase) {
+        const { data: adminUser, error: adminError } = await adminSupabase
+          .from('admin_users')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (adminError || !adminUser) {
+          return NextResponse.json({ isAdmin: false });
+        }
+
+        return NextResponse.json({ isAdmin: true });
+      }
+
+      return NextResponse.json({ isAdmin: false });
     } catch (error) {
       console.error("[auth/check-admin][GET] Admin check error:", error);
       return NextResponse.json({ isAdmin: false });
