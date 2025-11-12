@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { createAnonymousSupabase } from "../../../lib/supabase-server";
+import { convertToProxyUrl } from "../../../lib/file-url";
 import { CapturePageClient } from "./capture-page-client";
 
 export default async function CapturePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -24,6 +25,14 @@ export default async function CapturePage({ params }: { params: Promise<{ slug: 
     notFound();
   }
 
-  return <CapturePageClient leadMagnet={leadMagnet} />;
+  // Convert Supabase URL to proxy URL if it's a file
+  const convertedLeadMagnet = {
+    ...leadMagnet,
+    resource_url: leadMagnet.resource_type === "file"
+      ? convertToProxyUrl(leadMagnet.resource_url)
+      : leadMagnet.resource_url,
+  };
+
+  return <CapturePageClient leadMagnet={convertedLeadMagnet} />;
 }
 

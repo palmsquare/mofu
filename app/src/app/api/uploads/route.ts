@@ -96,10 +96,14 @@ export async function POST(request: Request) {
         );
       }
 
-      // Get public URL
+      // Get public URL from Supabase (for reference)
       const { data: urlData } = supabase.storage
         .from("lead-magnets")
         .getPublicUrl(uploadData.path);
+
+      // Create proxy URL using custom domain
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+      const proxyUrl = `${siteUrl}/api/files/${uploadData.path}`;
 
       return NextResponse.json({
         uploadId: `upl_${randomStr}`,
@@ -107,8 +111,9 @@ export async function POST(request: Request) {
         metadata: {
           filename: file.name,
           size: file.size,
-          url: urlData.publicUrl,
+          url: proxyUrl, // Use proxy URL instead of Supabase URL
           path: uploadData.path,
+          supabaseUrl: urlData.publicUrl, // Keep Supabase URL for reference
           quotaRemainingBytes: MAX_FILE_SIZE - file.size,
         },
       });

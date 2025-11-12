@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { supabaseServerClient } from "../../../lib/supabase-client";
+import { convertToProxyUrl } from "../../../lib/file-url";
 
 const SHARE_URL_BASE = process.env.NEXT_PUBLIC_SITE_URL 
   ? `${process.env.NEXT_PUBLIC_SITE_URL.replace(/\/$/, "")}/c/`
@@ -66,6 +67,9 @@ export async function GET() {
   return NextResponse.json({
     data: (data ?? []).map((leadMagnet) => ({
       ...leadMagnet,
+      resource_url: leadMagnet.resource_type === "file" 
+        ? convertToProxyUrl(leadMagnet.resource_url)
+        : leadMagnet.resource_url,
       shareUrl: leadMagnet.slug ? `${SHARE_URL_BASE}${leadMagnet.slug}` : null,
     })),
   });
@@ -146,6 +150,9 @@ export async function POST(request: Request) {
   return NextResponse.json({
     data: {
       ...data,
+      resource_url: data.resource_type === "file"
+        ? convertToProxyUrl(data.resource_url)
+        : data.resource_url,
       shareUrl: data.slug ? `${SHARE_URL_BASE}${data.slug}` : null,
     },
   });

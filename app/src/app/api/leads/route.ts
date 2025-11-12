@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { supabaseServerClient } from "../../../lib/supabase-client";
+import { convertToProxyUrl } from "../../../lib/file-url";
 
 export async function POST(request: Request) {
   let body: { leadMagnetId?: string; leadMagnetSlug?: string; data?: unknown; consentGranted?: unknown };
@@ -80,11 +81,16 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Impossible d'enregistrer le lead." }, { status: 500 });
   }
 
+  // Convert Supabase URL to proxy URL if it's a file
+  const resourceUrl = leadMagnet.resource_type === "file"
+    ? convertToProxyUrl(leadMagnet.resource_url)
+    : leadMagnet.resource_url;
+
   return NextResponse.json({
     data: {
       id: insertResult.id,
       createdAt: insertResult.created_at,
-      resourceUrl: leadMagnet.resource_url,
+      resourceUrl,
       resourceType: leadMagnet.resource_type,
     },
   });
