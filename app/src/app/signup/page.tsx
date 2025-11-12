@@ -33,11 +33,11 @@ export default function SignupPage() {
       if (data.user) {
         // If email confirmation is disabled, user is automatically logged in
         if (data.session) {
-          // Wait a bit for session to be fully established, then redirect
+          // Wait for session to be fully established and cookies to be set
           // Use window.location.href to force a full page reload so cookies are sent
           setTimeout(() => {
             window.location.href = '/dashboard';
-          }, 500);
+          }, 1000);
         } else {
           // Email confirmation required
           setSuccess(true);
