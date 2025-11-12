@@ -1,0 +1,246 @@
+import { redirect } from 'next/navigation';
+import { createServerSupabase } from '@/lib/supabase-server';
+import Link from 'next/link';
+
+export default async function DashboardPage() {
+  const supabase = await createServerSupabase();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/login');
+  }
+
+  // Fetch user's lead magnets with lead counts
+  const { data: leadMagnets, error } = await supabase
+    .from('lead_magnets')
+    .select('*, leads(count)')
+    .eq('owner_id', user.id)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error fetching lead magnets:', error);
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* Header */}
+      <header className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+              <p className="text-sm text-gray-600 mt-1">{user.email}</p>
+            </div>
+            <div className="flex items-center gap-4">
+              <Link
+                href="/"
+                className="text-gray-600 hover:text-gray-900 text-sm font-medium"
+              >
+                Créer un lead magnet
+              </Link>
+              <form action="/api/auth/signout" method="post">
+                <button
+                  type="submit"
+                  className="text-gray-600 hover:text-gray-900 text-sm font-medium"
+                >
+                  Déconnexion
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {/* Main Content */}
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Stats Overview */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Lead Magnets</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {leadMagnets?.length || 0}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-blue-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Total Leads</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {leadMagnets?.reduce(
+                    (acc, lm) => acc + (lm.leads?.[0]?.count || 0),
+                    0
+                  ) || 0}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-green-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Taux de conversion</p>
+                <p className="text-3xl font-bold text-gray-900">
+                  {leadMagnets && leadMagnets.length > 0
+                    ? Math.round(
+                        (leadMagnets.reduce(
+                          (acc, lm) => acc + (lm.leads?.[0]?.count || 0),
+                          0
+                        ) /
+                          leadMagnets.length) *
+                          100
+                      )
+                    : 0}
+                  %
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                <svg
+                  className="w-6 h-6 text-purple-600"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Lead Magnets List */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">
+              Mes Lead Magnets
+            </h2>
+          </div>
+
+          {!leadMagnets || leadMagnets.length === 0 ? (
+            <div className="px-6 py-12 text-center">
+              <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg
+                  className="w-8 h-8 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                  />
+                </svg>
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                Aucun lead magnet
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Crée ton premier lead magnet pour commencer à collecter des leads
+              </p>
+              <Link
+                href="/"
+                className="inline-block bg-blue-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                Créer mon premier lead magnet
+              </Link>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-200">
+              {leadMagnets.map((magnet) => (
+                <div
+                  key={magnet.slug}
+                  className="px-6 py-4 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-semibold text-gray-900 mb-1">
+                        {magnet.title}
+                      </h3>
+                      <p className="text-sm text-gray-600 mb-2">
+                        {magnet.description}
+                      </p>
+                      <div className="flex items-center gap-4 text-xs text-gray-500">
+                        <span>
+                          {magnet.resource_type === 'file' ? '📄 Fichier' : '🔗 Lien'}
+                        </span>
+                        <span>•</span>
+                        <span>
+                          {new Date(magnet.created_at).toLocaleDateString('fr-FR')}
+                        </span>
+                        <span>•</span>
+                        <span className="font-medium text-blue-600">
+                          {magnet.leads?.[0]?.count || 0} leads
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3 ml-4">
+                      <Link
+                        href={`/c/${magnet.slug}`}
+                        target="_blank"
+                        className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                      >
+                        Voir la page
+                      </Link>
+                      <Link
+                        href={`/dashboard/leads/${magnet.slug}`}
+                        className="text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors"
+                      >
+                        Voir les leads
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </main>
+    </div>
+  );
+}
+
+
