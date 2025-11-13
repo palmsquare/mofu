@@ -168,7 +168,7 @@ export default async function DashboardPage() {
         isAdmin = !!adminUser;
         console.log('[dashboard] Admin check result:', { isAdmin, userEmail, userId });
       }
-    }
+      }
     } catch (error) {
       console.error('[dashboard] Unexpected error checking admin status:', error);
       // If error, assume user is not admin
