@@ -90,6 +90,29 @@ export function AdminDashboard() {
     }
   };
 
+  const handleImpersonate = async (userId: string) => {
+    try {
+      const response = await fetch('/api/admin/impersonate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ targetUserId: userId }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to impersonate user');
+      }
+
+      // Redirect to dashboard (handled by API response)
+      window.location.href = '/dashboard';
+    } catch (error) {
+      console.error('Error impersonating user:', error);
+      alert('Erreur lors de la connexion en tant que cet utilisateur.');
+    }
+  };
+
   const handleDeleteUser = async (userId: string) => {
     if (!confirm('Es-tu sûr de vouloir supprimer ce compte utilisateur ? Cette action est irréversible.')) {
       return;
@@ -399,12 +422,20 @@ export function AdminDashboard() {
                           {new Date(user.createdAt).toLocaleDateString('fr-FR')}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <button
-                            onClick={() => handleDeleteUser(user.id)}
-                            className="text-red-600 hover:text-red-900"
-                          >
-                            Supprimer
-                          </button>
+                          <div className="flex items-center gap-3">
+                            <button
+                              onClick={() => handleImpersonate(user.id)}
+                              className="text-indigo-600 hover:text-indigo-900 font-medium"
+                            >
+                              Se connecter en tant que
+                            </button>
+                            <button
+                              onClick={() => handleDeleteUser(user.id)}
+                              className="text-red-600 hover:text-red-900"
+                            >
+                              Supprimer
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))

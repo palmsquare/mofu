@@ -1,50 +1,93 @@
 import { redirect } from 'next/navigation';
-import { createServerSupabase } from '@/lib/supabase-server';
+import { createServerSupabase, getEffectiveUserId } from '@/lib/supabase-server';
 import { createSupabaseAdminClient } from '@/lib/supabase-admin-client';
+import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { DashboardClient } from './dashboard-client';
 import { QuotasDisplay } from '@/components/quotas-display';
 import { AdminButtonClient } from '@/components/admin-button-client';
+import { ImpersonationBanner } from '@/components/impersonation-banner';
 
 export default async function DashboardPage() {
+  const cookieStore = await cookies();
   const supabase = await createServerSupabase();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // Check if we're in impersonation mode
+  const impersonateTargetUserId = cookieStore.get('impersonate_target_user_id')?.value;
+  const impersonateTargetUserEmail = cookieStore.get('impersonate_target_user_email')?.value;
+  const impersonateAdminId = cookieStore.get('impersonate_admin_id')?.value;
 
-  if (!user) {
+  // Get effective user ID (target user if impersonating, otherwise current user)
+  const effectiveUserId = await getEffectiveUserId();
+
+  if (!effectiveUserId) {
     redirect('/login');
   }
 
-  // Claim anonymous lead magnets created in the last hour
-  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-  const { data: claimedMagnets } = await supabase
-    .from('lead_magnets')
-    .update({ owner_id: user.id })
-    .is('owner_id', null)
-    .gte('created_at', oneHourAgo)
-    .select();
+  // If impersonating, we need to use the admin client to fetch data as the target user
+  let user;
+  let userEmail: string;
+  let isImpersonating = false;
+  
+  if (impersonateTargetUserId && impersonateAdminId) {
+    // We're impersonating - get target user info using admin client
+    isImpersonating = true;
+    const adminSupabase = createSupabaseAdminClient();
+    const { data: targetUserData } = await adminSupabase.auth.admin.getUserById(impersonateTargetUserId);
+    user = targetUserData?.user;
+    userEmail = impersonateTargetUserEmail || targetUserData?.user?.email || '';
+    
+    if (!user) {
+      redirect('/admin');
+    }
+  } else {
+    // Normal mode - get current user
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    user = currentUser;
+    userEmail = currentUser?.email || '';
+    
+    if (!user) {
+      redirect('/login');
+    }
+  }
 
-  // Also update leads for claimed magnets
-  if (claimedMagnets && claimedMagnets.length > 0) {
-    const magnetSlugs = claimedMagnets.map((m) => m.slug);
-    await supabase
-      .from('leads')
-      .update({ owner_id: user.id })
-      .in('lead_magnet_slug', magnetSlugs)
-      .is('owner_id', null);
+  // Use effective user ID for all queries
+  const userId = effectiveUserId;
+  
+  // If impersonating, use admin client for data fetching
+  const dataSupabase = isImpersonating ? createSupabaseAdminClient() : supabase;
+
+  // Claim anonymous lead magnets created in the last hour (only if not impersonating)
+  if (!isImpersonating) {
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+    const { data: claimedMagnets } = await supabase
+      .from('lead_magnets')
+      .update({ owner_id: userId })
+      .is('owner_id', null)
+      .gte('created_at', oneHourAgo)
+      .select();
+
+    // Also update leads for claimed magnets
+    if (claimedMagnets && claimedMagnets.length > 0) {
+      const magnetSlugs = claimedMagnets.map((m) => m.slug);
+      await supabase
+        .from('leads')
+        .update({ owner_id: userId })
+        .in('lead_magnet_slug', magnetSlugs)
+        .is('owner_id', null);
+    }
   }
 
   // Fetch user's lead magnets with lead counts
   // Use left join to include lead magnets without leads
-  const { data: leadMagnets, error } = await supabase
+  // If impersonating, use admin client and filter by target user ID
+  const { data: leadMagnets, error } = await dataSupabase
     .from('lead_magnets')
     .select(`
       *,
       leads(count)
     `)
-    .eq('owner_id', user.id)
+    .eq('owner_id', userId)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -61,11 +104,11 @@ export default async function DashboardPage() {
   // Get analytics for each lead magnet (views and conversions)
   const leadMagnetsWithStats = await Promise.all(
     allLeadMagnets.map(async (lm) => {
-      const { data: pageViews } = await supabase
+      const { data: pageViews } = await dataSupabase
         .from('page_views')
         .select('event_type')
         .eq('lead_magnet_slug', lm.slug)
-        .eq('owner_id', user.id);
+        .eq('owner_id', userId);
 
       const views = pageViews?.filter((pv) => pv.event_type === 'view').length || 0;
       const conversions = pageViews?.filter((pv) => pv.event_type === 'conversion').length || 0;
@@ -132,13 +175,21 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      {/* Impersonation Banner */}
+      {isImpersonating && impersonateTargetUserEmail && (
+        <ImpersonationBanner 
+          targetUserEmail={impersonateTargetUserEmail} 
+          adminUserId={impersonateAdminId}
+        />
+      )}
+      
       {/* Header */}
       <header className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-              <p className="text-sm text-gray-600 mt-1">{user.email}</p>
+              <p className="text-sm text-gray-600 mt-1">{userEmail}</p>
             </div>
             <div className="flex items-center gap-4">
               <DashboardClient />
