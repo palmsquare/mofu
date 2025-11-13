@@ -126,25 +126,27 @@ export default async function DashboardPage() {
   );
 
   // Check if user is admin using admin client to bypass RLS
+  // Only check if not impersonating (we're already admin if impersonating)
   let isAdmin = false;
-  try {
-    let adminSupabase;
+  if (!isImpersonating) {
     try {
-      adminSupabase = createSupabaseAdminClient();
-    } catch (clientError) {
-      console.error('[dashboard] Failed to create admin client:', clientError);
-      console.error('[dashboard] This usually means SUPABASE_SERVICE_ROLE_KEY is not set on Vercel');
-      console.error('[dashboard] Check Vercel Environment Variables: Settings → Environment Variables');
-      // If we can't create admin client, assume user is not admin
-      isAdmin = false;
-    }
+      let adminSupabase;
+      try {
+        adminSupabase = createSupabaseAdminClient();
+      } catch (clientError) {
+        console.error('[dashboard] Failed to create admin client:', clientError);
+        console.error('[dashboard] This usually means SUPABASE_SERVICE_ROLE_KEY is not set on Vercel');
+        console.error('[dashboard] Check Vercel Environment Variables: Settings → Environment Variables');
+        // If we can't create admin client, assume user is not admin
+        isAdmin = false;
+      }
 
-    if (adminSupabase) {
-      const { data: adminUser, error: adminError } = await adminSupabase
-        .from('admin_users')
-        .select('*')
-        .eq('user_id', user.id)
-        .single();
+      if (adminSupabase) {
+        const { data: adminUser, error: adminError } = await adminSupabase
+          .from('admin_users')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
       
       if (adminError) {
         console.error('[dashboard] Admin check error:', adminError);
