@@ -152,8 +152,8 @@ export default async function DashboardPage() {
         console.error('[dashboard] Admin check error:', adminError);
         console.error('[dashboard] Error code:', adminError.code);
         console.error('[dashboard] Error message:', adminError.message);
-        console.error('[dashboard] User ID:', user.id);
-        console.error('[dashboard] User email:', user.email);
+        console.error('[dashboard] User ID:', userId);
+        console.error('[dashboard] User email:', userEmail);
         
         // If table doesn't exist or no rows found, user is not admin
         if (adminError.code === '42P01' || adminError.code === 'PGRST116') {
@@ -166,13 +166,17 @@ export default async function DashboardPage() {
         }
       } else {
         isAdmin = !!adminUser;
-        console.log('[dashboard] Admin check result:', { isAdmin, userEmail: user.email, userId: user.id });
+        console.log('[dashboard] Admin check result:', { isAdmin, userEmail, userId });
       }
     }
-  } catch (error) {
-    console.error('[dashboard] Unexpected error checking admin status:', error);
-    // If error, assume user is not admin
-    isAdmin = false;
+    } catch (error) {
+      console.error('[dashboard] Unexpected error checking admin status:', error);
+      // If error, assume user is not admin
+      isAdmin = false;
+    }
+  } else {
+    // If impersonating, we're already admin
+    isAdmin = true;
   }
 
   return (
