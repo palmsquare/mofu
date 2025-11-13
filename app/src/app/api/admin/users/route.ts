@@ -13,15 +13,24 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Non authentifié." }, { status: 401 });
     }
 
-    // Check if user is admin
-    const { data: adminUser, error: adminError } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('user_id', user.id)
-      .single();
+    // Check if user is admin using admin client to bypass RLS
+    let isAdmin = false;
+    try {
+      const adminSupabaseCheck = createSupabaseAdminClient();
+      const { data: adminUser, error: adminError } = await adminSupabaseCheck
+        .from('admin_users')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
 
-    if (adminError || !adminUser) {
-      return NextResponse.json({ error: "Accès non autorisé." }, { status: 403 });
+      if (adminError || !adminUser) {
+        console.error("[admin/users][GET] Admin check failed:", adminError);
+        return NextResponse.json({ error: "Accès non autorisé." }, { status: 403 });
+      }
+      isAdmin = true;
+    } catch (clientError) {
+      console.error("[admin/users][GET] Failed to create admin client for check:", clientError);
+      return NextResponse.json({ error: "Impossible de vérifier les droits admin." }, { status: 500 });
     }
 
     // Use admin client for all operations (bypasses RLS)

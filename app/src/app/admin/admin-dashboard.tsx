@@ -59,14 +59,19 @@ export function AdminDashboard() {
 
   const fetchUsers = async () => {
     try {
+      setLoading(true);
       const response = await fetch('/api/admin/users');
       if (!response.ok) {
-        throw new Error('Failed to fetch users');
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to fetch users:', errorData);
+        throw new Error(errorData.error || 'Failed to fetch users');
       }
       const data = await response.json();
+      console.log('Fetched users:', data);
       setUsers(data.data || []);
     } catch (error) {
       console.error('Error fetching users:', error);
+      alert('Erreur lors du chargement des utilisateurs. Vérifie la console pour plus de détails.');
     } finally {
       setLoading(false);
     }
