@@ -74,7 +74,16 @@ export async function DELETE(
       }
     }
 
-    // Delete user's data (leads, lead_magnets, quotas will be deleted via CASCADE)
+    // Delete user's data (leads, lead_magnets, quotas, analytics will be deleted)
+    const { error: deletePageViewsError } = await adminSupabase
+      .from('page_views')
+      .delete()
+      .eq('owner_id', userId);
+
+    if (deletePageViewsError) {
+      console.error("[admin/users][DELETE] delete page views error:", deletePageViewsError);
+    }
+
     const { error: deleteLeadsError } = await adminSupabase
       .from('leads')
       .delete()

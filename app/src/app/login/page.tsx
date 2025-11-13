@@ -18,6 +18,22 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
+      // Check if email or IP is banned before login
+      const banCheck = await fetch('/api/auth/check-ban', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      if (banCheck.ok) {
+        const banData = await banCheck.json();
+        if (banData.banned) {
+          setError('Accès refusé.');
+          setLoading(false);
+          return;
+        }
+      }
+
       const supabase = supabaseBrowserClient();
       const { data, error } = await supabase.auth.signInWithPassword({
         email,

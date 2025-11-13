@@ -1,9 +1,19 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 
 import { supabaseServerClient } from "../../../lib/supabase-client";
 import { convertToProxyUrl } from "../../../lib/file-url";
+import { isBanned, getClientIP } from "../../../lib/check-ban";
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  try {
+    // Check for banned IPs
+    const clientIP = getClientIP(request);
+    if (clientIP && await isBanned('ip', clientIP)) {
+      return NextResponse.json(
+        { error: "Accès refusé." },
+        { status: 403 }
+      );
+    }
   let body: { leadMagnetId?: string; leadMagnetSlug?: string; data?: unknown; consentGranted?: unknown };
 
   try {
@@ -65,6 +75,14 @@ export async function POST(request: Request) {
   const formDataObj = body.data as Record<string, unknown>;
   const leadEmail = formDataObj["field-email"] || formDataObj["email"] || null;
   const leadName = formDataObj["field-name"] || formDataObj["name"] || null;
+
+  // Check for banned emails
+  if (leadEmail && typeof leadEmail === "string" && await isBanned('email', leadEmail)) {
+    return NextResponse.json(
+      { error: "Accès refusé." },
+      { status: 403 }
+    );
+  }
 
   // Assign lead to the lead magnet owner (not the prospect who submitted the form)
   // This way leads appear in the dashboard of the lead magnet creator

@@ -46,15 +46,19 @@ interface Download {
 export function AdminDashboard() {
   const [users, setUsers] = useState<User[]>([]);
   const [downloads, setDownloads] = useState<Download[]>([]);
+  const [bans, setBans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'users' | 'storage' | 'downloads'>('users');
+  const [activeTab, setActiveTab] = useState<'users' | 'storage' | 'downloads' | 'bans'>('users');
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [showUserFiles, setShowUserFiles] = useState<string | null>(null);
+  const [showBanForm, setShowBanForm] = useState(false);
+  const [banForm, setBanForm] = useState({ type: 'email' as 'email' | 'ip' | 'user_id', value: '', reason: '', expires_at: '' });
 
   useEffect(() => {
     fetchUsers();
     fetchDownloads();
+    fetchBans();
   }, []);
 
   const fetchUsers = async () => {
@@ -87,6 +91,19 @@ export function AdminDashboard() {
       setDownloads(data.data || []);
     } catch (error) {
       console.error('Error fetching downloads:', error);
+    }
+  };
+
+  const fetchBans = async () => {
+    try {
+      const response = await fetch('/api/admin/bans?active_only=true');
+      if (!response.ok) {
+        throw new Error('Failed to fetch bans');
+      }
+      const data = await response.json();
+      setBans(data.data || []);
+    } catch (error) {
+      console.error('Error fetching bans:', error);
     }
   };
 
@@ -162,6 +179,65 @@ export function AdminDashboard() {
     } catch (error) {
       console.error('Error deleting file:', error);
       alert('Erreur lors de la suppression du fichier.');
+    }
+  };
+
+  const handleCreateBan = async () => {
+    if (!banForm.value.trim()) {
+      alert('Veuillez remplir la valeur du ban.');
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/bans', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          type: banForm.type,
+          value: banForm.value.trim(),
+          reason: banForm.reason.trim() || undefined,
+          expires_at: banForm.expires_at || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create ban');
+      }
+
+      // Refresh bans list
+      fetchBans();
+      setShowBanForm(false);
+      setBanForm({ type: 'email', value: '', reason: '', expires_at: '' });
+      alert('Ban créé avec succès.');
+    } catch (error) {
+      console.error('Error creating ban:', error);
+      alert('Erreur lors de la création du ban.');
+    }
+  };
+
+  const handleDeleteBan = async (banId: string) => {
+    if (!confirm('Es-tu sûr de vouloir désactiver ce ban ?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/admin/bans/${banId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete ban');
+      }
+
+      // Refresh bans list
+      fetchBans();
+    } catch (error) {
+      console.error('Error deleting ban:', error);
+      alert('Erreur lors de la désactivation du ban.');
     }
   };
 
@@ -311,6 +387,16 @@ export function AdminDashboard() {
                 }`}
               >
                 Logs de téléchargement
+              </button>
+              <button
+                onClick={() => setActiveTab('bans')}
+                className={`px-6 py-3 text-sm font-medium border-b-2 ${
+                  activeTab === 'bans'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                Bannissements
               </button>
             </nav>
           </div>
