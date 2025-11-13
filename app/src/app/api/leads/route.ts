@@ -5,15 +5,15 @@ import { convertToProxyUrl } from "../../../lib/file-url";
 import { isBanned, getClientIP } from "../../../lib/check-ban";
 
 export async function POST(request: NextRequest) {
-  try {
-    // Check for banned IPs
-    const clientIP = getClientIP(request);
-    if (clientIP && await isBanned('ip', clientIP)) {
-      return NextResponse.json(
-        { error: "Accès refusé." },
-        { status: 403 }
-      );
-    }
+  // Check for banned IPs before parsing body
+  const clientIP = getClientIP(request);
+  if (clientIP && await isBanned('ip', clientIP)) {
+    return NextResponse.json(
+      { error: "Accès refusé." },
+      { status: 403 }
+    );
+  }
+
   let body: { leadMagnetId?: string; leadMagnetSlug?: string; data?: unknown; consentGranted?: unknown };
 
   try {

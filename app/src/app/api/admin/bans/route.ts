@@ -54,9 +54,7 @@ export async function GET(request: NextRequest) {
       query = query.eq('is_active', true);
     }
 
-    query = query.order('created_at', { ascending: false });
-
-    const { data: bans, error: bansError } = await query;
+    const { data: bans, error: bansError } = await query.order('created_at', { ascending: false });
 
     if (bansError) {
       console.error("[admin/bans][GET] Error fetching bans:", bansError);

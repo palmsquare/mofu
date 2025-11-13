@@ -691,6 +691,169 @@ export function AdminDashboard() {
                 )}
               </div>
             )}
+
+            {activeTab === 'bans' && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Bannissements actifs</h3>
+                  <button
+                    onClick={() => setShowBanForm(!showBanForm)}
+                    className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                  >
+                    {showBanForm ? 'Annuler' : '+ Ajouter un ban'}
+                  </button>
+                </div>
+
+                {showBanForm && (
+                  <div className="bg-gray-50 rounded-lg p-6 mb-6 border border-gray-200">
+                    <h4 className="text-base font-semibold text-gray-900 mb-4">Nouveau bannissement</h4>
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Type de ban
+                        </label>
+                        <select
+                          value={banForm.type}
+                          onChange={(e) => setBanForm({ ...banForm, type: e.target.value as 'email' | 'ip' | 'user_id' })}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                        >
+                          <option value="email">Email</option>
+                          <option value="ip">Adresse IP</option>
+                          <option value="user_id">ID Utilisateur</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Valeur
+                        </label>
+                        <input
+                          type="text"
+                          value={banForm.value}
+                          onChange={(e) => setBanForm({ ...banForm, value: e.target.value })}
+                          placeholder={banForm.type === 'email' ? 'email@example.com' : banForm.type === 'ip' ? '192.168.1.1' : 'uuid-utilisateur'}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Raison (optionnel)
+                        </label>
+                        <textarea
+                          value={banForm.reason}
+                          onChange={(e) => setBanForm({ ...banForm, reason: e.target.value })}
+                          placeholder="Raison du bannissement..."
+                          rows={2}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Date d'expiration (optionnel, vide = permanent)
+                        </label>
+                        <input
+                          type="datetime-local"
+                          value={banForm.expires_at}
+                          onChange={(e) => setBanForm({ ...banForm, expires_at: e.target.value })}
+                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                        />
+                      </div>
+                      <button
+                        onClick={handleCreateBan}
+                        className="w-full rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                      >
+                        Créer le ban
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Type
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Valeur
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Raison
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date d'expiration
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Banni par
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Date de création
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Actions
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {bans.length === 0 ? (
+                        <tr>
+                          <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                            <div className="flex flex-col items-center gap-2">
+                              <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                              </svg>
+                              <p className="text-sm font-medium">Aucun ban actif</p>
+                              <p className="text-xs text-gray-400">Les bans apparaîtront ici.</p>
+                            </div>
+                          </td>
+                        </tr>
+                      ) : (
+                        bans.map((ban) => (
+                          <tr key={ban.id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                                ban.type === 'email' ? 'bg-blue-100 text-blue-800' :
+                                ban.type === 'ip' ? 'bg-red-100 text-red-800' :
+                                'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {ban.type === 'email' ? '📧 Email' :
+                                 ban.type === 'ip' ? '🌐 IP' :
+                                 '👤 User ID'}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-mono">
+                              {ban.value}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-500">
+                              {ban.reason || <span className="text-gray-400">Aucune raison</span>}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {ban.expires_at 
+                                ? new Date(ban.expires_at).toLocaleString('fr-FR')
+                                : <span className="text-gray-400">Permanent</span>}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {ban.banned_by_email || <span className="text-gray-400">N/A</span>}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(ban.created_at).toLocaleDateString('fr-FR')}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                              <button
+                                onClick={() => handleDeleteBan(ban.id)}
+                                className="text-red-600 hover:text-red-900"
+                              >
+                                Désactiver
+                              </button>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </main>
