@@ -4,6 +4,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase-admin-client';
 import Link from 'next/link';
 import { DashboardClient } from './dashboard-client';
 import { QuotasDisplay } from '@/components/quotas-display';
+import { AdminButtonClient } from '@/components/admin-button-client';
 
 export default async function DashboardPage() {
   const supabase = await createServerSupabase();
@@ -141,6 +142,7 @@ export default async function DashboardPage() {
             </div>
             <div className="flex items-center gap-4">
               <DashboardClient />
+              {/* Server-side check (fallback if client-side fails) */}
               {isAdmin && (
                 <Link
                   href="/admin"
@@ -152,6 +154,8 @@ export default async function DashboardPage() {
                   Admin
                 </Link>
               )}
+              {/* Client-side check (works even if server-side check fails) */}
+              <AdminButtonClient />
               <form action="/api/auth/signout" method="post">
                 <button
                   type="submit"
