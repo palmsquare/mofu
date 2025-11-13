@@ -34,10 +34,18 @@ export async function GET(request: NextRequest) {
     }
 
     // Use admin client for all operations (bypasses RLS)
-    const adminSupabase = createSupabaseAdminClient();
+    let adminSupabase;
+    try {
+      adminSupabase = createSupabaseAdminClient();
+    } catch (clientError) {
+      console.error("[admin/users][GET] Failed to create admin client:", clientError);
+      return NextResponse.json({ error: "Impossible de créer le client admin." }, { status: 500 });
+    }
     
     // Get all users with their quotas
     const { data: usersData, error: usersError } = await adminSupabase.auth.admin.listUsers();
+    
+    console.log("[admin/users][GET] Users count:", usersData?.users?.length || 0);
 
     if (usersError) {
       console.error("[admin/users][GET] users error:", usersError);
